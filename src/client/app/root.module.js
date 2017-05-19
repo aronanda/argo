@@ -1,6 +1,6 @@
 import angular from "angular";
 
-import { rootComponent } from "./root.component";
+import "./root.component";
 import { common } from "./common/common.module";
 import { components } from "./components/components.module";
 
@@ -9,5 +9,4 @@ export const root = angular
         common,
         components
     ])
-    .component("root", rootComponent)
     .name;
