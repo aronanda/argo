@@ -12,13 +12,13 @@ export class AppTemplate {
         const isNewsTab = state.tabSelectedIndex === 5;
         const isPluginsTab = state.tabSelectedIndex === 6;
         const tabs = [
-            hyperHTML.wire()`<trades></trades>`,
-            hyperHTML.wire()`<orders></orders>`,
-            hyperHTML.wire()`<positions></positions>`,
-            hyperHTML.wire()`<exposure></exposure>`,
-            hyperHTML.wire()`<activity></activity>`,
-            hyperHTML.wire()`<news></news>`,
-            hyperHTML.wire()`<plugins></plugins>`
+            hyperHTML.wire(render, ":trades")`<trades></trades>`,
+            hyperHTML.wire(render, ":orders")`<orders></orders>`,
+            hyperHTML.wire(render, ":positions")`<positions></positions>`,
+            hyperHTML.wire(render, ":exposure")`<exposure></exposure>`,
+            hyperHTML.wire(render, ":activity")`<activity></activity>`,
+            hyperHTML.wire(render, ":news")`<news></news>`,
+            hyperHTML.wire(render, ":plugins")`<plugins></plugins>`
         ];
         const selectedTab = tabs[state.tabSelectedIndex];
 
