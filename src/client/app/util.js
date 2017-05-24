@@ -1,3 +1,5 @@
+import hyperHTML from "hyperhtml";
+
 export class Util {
     static query(selector) {
         return document.querySelector(selector) ||
@@ -13,4 +15,9 @@ export class Util {
         return method in context ? context[method](e, payload)
             : console.warn(e.type, "not implemented");
     }
+
+    static renderEmpty(render) {
+        render`${hyperHTML.wire(render, ":empty")``}`;
+    }
+
 }
