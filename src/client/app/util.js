@@ -10,14 +10,13 @@ export class Util {
         const type = e.type;
         const id = e.target.id || console.warn(e.target, "target without id");
         const method = `on${id[0].toUpperCase()}${id.slice(1)}` +
-             `${type[0].toUpperCase()}${type.slice(1)}`;
+            `${type[0].toUpperCase()}${type.slice(1)}`;
 
         return method in context ? context[method](e, payload)
-            : console.warn(e.type, "not implemented");
+            : console.warn(method, "not implemented");
     }
 
     static renderEmpty(render) {
         render`${hyperHTML.wire(render, ":empty")``}`;
     }
-
 }
