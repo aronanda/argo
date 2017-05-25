@@ -22,6 +22,7 @@ export class AppTemplate {
         ];
         const selectedTab = tabs[state.tabSelectedIndex];
 
+        /* eslint indent: off */
         render`
             <header></header>
 
