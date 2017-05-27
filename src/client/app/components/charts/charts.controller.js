@@ -1,10 +1,11 @@
 import angular from "angular";
 
+import { ToastsService } from "../toasts/toasts.service";
+
 export class ChartsController {
-    constructor(ToastsService, AccountsService, ChartsService,
+    constructor(AccountsService, ChartsService,
         QuotesService, TradesService) {
 
-        this.ToastsService = ToastsService;
         this.AccountsService = AccountsService;
         this.ChartsService = ChartsService;
         this.QuotesService = QuotesService;
@@ -62,7 +63,7 @@ export class ChartsController {
         }).then(candles => {
             this.data = candles;
         }).catch(err => {
-            this.ToastsService.addToast(err);
+            ToastsService.addToast(err);
         });
     }
 
@@ -78,6 +79,6 @@ export class ChartsController {
     }
 }
 ChartsController.$inject = [
-    "ToastsService", "AccountsService", "ChartsService",
+    "AccountsService", "ChartsService",
     "QuotesService", "TradesService"
 ];

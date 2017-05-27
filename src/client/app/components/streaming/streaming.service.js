@@ -1,13 +1,14 @@
 import angular from "angular";
 
+import { ToastsService } from "../toasts/toasts.service";
+
 export class StreamingService {
-    constructor($timeout, $http, ToastsService,
+    constructor($timeout, $http,
         QuotesService, ActivityService, TradesService,
         OrdersService, AccountsService, PluginsService) {
 
         this.$timeout = $timeout;
         this.$http = $http;
-        this.ToastsService = ToastsService;
         this.QuotesService = QuotesService;
         this.ActivityService = ActivityService;
         this.TradesService = TradesService;
@@ -25,7 +26,7 @@ export class StreamingService {
         }).then(() => {
             this.getStream();
         }).catch(err => {
-            this.ToastsService.addToast(err);
+            ToastsService.addToast(err);
         });
     }
 
@@ -85,7 +86,7 @@ export class StreamingService {
     }
 }
 StreamingService.$inject = [
-    "$timeout", "$http", "ToastsService",
+    "$timeout", "$http",
     "QuotesService", "ActivityService", "TradesService",
     "OrdersService", "AccountsService", "PluginsService"
 ];

@@ -1,11 +1,10 @@
 import angular from "angular";
 
-import { Toasts2Service } from "../toasts/toasts2.service";
+import { ToastsService } from "../toasts/toasts.service";
 
 export class TokenDialogController {
-    constructor($window, ToastsService, SessionService, AccountsService, StreamingService) {
+    constructor($window, SessionService, AccountsService, StreamingService) {
         this.$window = $window;
-        this.ToastsService = ToastsService;
         this.SessionService = SessionService;
         this.AccountsService = AccountsService;
         this.StreamingService = StreamingService;
@@ -54,8 +53,7 @@ export class TokenDialogController {
             }
             angular.extend(this.accounts, accounts);
         }).catch(err => {
-            this.ToastsService.addToast(err);
-            Toasts2Service.addToast(err);
+            ToastsService.addToast(err);
             this.closeModal();
         });
     }
@@ -85,14 +83,13 @@ export class TokenDialogController {
 
             this.closeModal({ tokenInfo });
         }).catch(err => {
-            this.ToastsService.addToast(err);
-            Toasts2Service.addToast(err);
+            ToastsService.addToast(err);
             this.closeModal();
         });
     }
 
 }
 TokenDialogController.$inject = [
-    "$window", "ToastsService", "SessionService",
+    "$window", "SessionService",
     "AccountsService", "StreamingService"
 ];

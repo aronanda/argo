@@ -2,7 +2,7 @@ import hyperHTML from "hyperHTML";
 
 import { Util } from "../../util";
 
-export class Toasts2Template {
+export class ToastsTemplate {
     static update(render, state) {
         if (!state.toasts.length) {
             Util.renderEmpty(render);

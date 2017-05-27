@@ -1,6 +1,7 @@
+import { ToastsService } from "../toasts/toasts.service";
+
 export class TradesController {
-    constructor(ToastsService, TradesService) {
-        this.ToastsService = ToastsService;
+    constructor(TradesService) {
         this.TradesService = TradesService;
     }
 
@@ -35,13 +36,13 @@ export class TradesController {
             }
 
 
-            this.ToastsService.addToast(message);
+            ToastsService.addToast(message);
         }).catch(err => {
             const message = `ERROR ${err.code} ${err.message}`;
 
-            this.ToastsService.addToast(message);
+            ToastsService.addToast(message);
         });
     }
 
 }
-TradesController.$inject = ["ToastsService", "TradesService"];
+TradesController.$inject = ["TradesService"];

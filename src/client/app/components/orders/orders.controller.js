@@ -1,6 +1,7 @@
+import { ToastsService } from "../toasts/toasts.service";
+
 export class OrdersController {
-    constructor(ToastsService, OrdersService) {
-        this.ToastsService = ToastsService;
+    constructor(OrdersService) {
         this.OrdersService = OrdersService;
     }
 
@@ -29,13 +30,13 @@ export class OrdersController {
                 message = `ERROR ${order.errorMessage || order.message}`;
             }
 
-            this.ToastsService.addToast(message);
+            ToastsService.addToast(message);
         }).catch(err => {
             const message = `ERROR ${err.code} ${err.message}`;
 
-            this.ToastsService.addToast(message);
+            ToastsService.addToast(message);
         });
     }
 
 }
-OrdersController.$inject = ["ToastsService", "OrdersService"];
+OrdersController.$inject = ["OrdersService"];

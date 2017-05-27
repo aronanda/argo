@@ -1,12 +1,13 @@
 import angular from "angular";
 
+import { ToastsService } from "../toasts/toasts.service";
+
 export class HeaderController {
-    constructor($window, $rootScope, ToastsService,
+    constructor($window, $rootScope,
         AccountsService, SessionService, QuotesService, StreamingService) {
 
         this.$window = $window;
         this.$rootScope = $rootScope;
-        this.ToastsService = ToastsService;
         this.AccountsService = AccountsService;
         this.SessionService = SessionService;
         this.QuotesService = QuotesService;
@@ -48,7 +49,7 @@ export class HeaderController {
             this.openSettingsModal = true;
         }).catch(err => {
             if (err) {
-                this.ToastsService.addToast(err);
+                ToastsService.addToast(err);
             }
         });
     }
@@ -77,7 +78,7 @@ export class HeaderController {
 
 }
 HeaderController.$inject = [
-    "$window", "$rootScope", "ToastsService",
+    "$window", "$rootScope",
     "AccountsService", "SessionService",
     "QuotesService", "StreamingService"
 ];

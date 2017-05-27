@@ -1,6 +1,7 @@
+import { ToastsService } from "../toasts/toasts.service";
+
 export class OrderDialogController {
-    constructor(ToastsService, QuotesService, OrdersService, AccountsService) {
-        this.ToastsService = ToastsService;
+    constructor(QuotesService, OrdersService, AccountsService) {
         this.QuotesService = QuotesService;
         this.OrdersService = OrdersService;
         this.AccountsService = AccountsService;
@@ -92,7 +93,7 @@ export class OrderDialogController {
         }
 
         if (!this.pips) {
-            this.ToastsService .addToast(`Pips info for ${this.selectedInstrument} not yet available. Retry.`);
+            ToastsService.addToast(`Pips info for ${this.selectedInstrument} not yet available. Retry.`);
             this.openModal = false;
 
             return;
@@ -189,17 +190,17 @@ export class OrderDialogController {
             if (transaction.message) {
                 message = `ERROR ${transaction.message}`;
 
-                this.ToastsService.addToast(message);
+                ToastsService.addToast(message);
             } else if (transaction.errorMessage) {
                 message = `ERROR ${transaction.errorMessage}`;
 
-                this.ToastsService.addToast(message);
+                ToastsService.addToast(message);
             } else if (transaction.orderCancelTransaction) {
                 canceled = transaction.orderCancelTransaction;
 
                 message = `ERROR ${canceled.reason}`;
 
-                this.ToastsService.addToast(message);
+                ToastsService.addToast(message);
             } else {
                 opened = transaction.orderFillTransaction ||
                     transaction.orderFillTransaction ||
@@ -212,9 +213,9 @@ export class OrderDialogController {
                     `@${opened.price} ` +
                     `for ${opened.units}`;
 
-                this.ToastsService.addToast(message);
+                ToastsService.addToast(message);
             }
         });
     }
 }
-OrderDialogController.$inject = ["ToastsService", "QuotesService", "OrdersService", "AccountsService"];
+OrderDialogController.$inject = ["QuotesService", "OrdersService", "AccountsService"];
