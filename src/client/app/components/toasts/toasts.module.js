@@ -1,2 +1,3 @@
-import "./toasts.component";
-import "./toasts.service";
+import { ToastsComponent } from "./toasts.component";
+
+ToastsComponent.bootstrap();

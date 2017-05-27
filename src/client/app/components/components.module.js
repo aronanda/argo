@@ -46,5 +46,4 @@ export const components = angular
     ])
     .name;
 
-import { ToastsComponent } from "../components/toasts/toasts.component";
-ToastsComponent.bootstrap();
+import "../components/toasts/toasts.module";

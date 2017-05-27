@@ -2198,6 +2198,8 @@ class ToastsComponent {
     }
 }
 
+ToastsComponent.bootstrap();
+
 const components = angular
     .module("components", [
         account,
@@ -2222,8 +2224,6 @@ const components = angular
         yesnoDialog
     ])
     .name;
-
-ToastsComponent.bootstrap();
 
 const root = angular
     .module("root", [
