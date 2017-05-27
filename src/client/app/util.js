@@ -1,4 +1,4 @@
-import hyperHTML from "hyperhtml";
+import hyperHTML from "hyperHTML";
 
 export class Util {
     static query(selector) {
@@ -18,5 +18,17 @@ export class Util {
 
     static renderEmpty(render) {
         render`${hyperHTML.wire(render, ":empty")``}`;
+    }
+
+    static pad(n) {
+        return n < 10 ? `0${n}` : n;
+    }
+
+    static getHHMMSSfromDate(date) {
+        const hours = Util.pad(date.getHours());
+        const minutes = Util.pad(date.getMinutes());
+        const seconds = Util.pad(date.getSeconds());
+
+        return `${hours}:${minutes}:${seconds}`;
     }
 }

@@ -47,3 +47,6 @@ export const components = angular
         yesnoDialog
     ])
     .name;
+
+import { Toasts2Component } from "../components/toasts/toasts2.component";
+Toasts2Component.bootstrap();

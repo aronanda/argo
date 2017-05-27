@@ -62,6 +62,7 @@ export class AppTemplate {
                     <account class="mb4"></account>
                     <quotes class="mb4"></quotes>
                     <toasts></toasts>
+                    <toasts2></toasts2>
                 </div>
                 <div class="flex flex-wrap flex-column min-w-75">
                     <div class="ma2 pa2">${selectedTab}</div>

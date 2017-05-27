@@ -16,10 +16,14 @@ class Util {
         const type = e.type;
         const id = e.target.id || console.warn(e.target, "target without id");
         const method = `on${id[0].toUpperCase()}${id.slice(1)}` +
-             `${type[0].toUpperCase()}${type.slice(1)}`;
+            `${type[0].toUpperCase()}${type.slice(1)}`;
 
         return method in context ? context[method](e, payload)
-            : console.warn(e.type, "not implemented");
+            : console.warn(method, "not implemented");
+    }
+
+    static renderEmpty(render) {
+        render`${hyperHTML.wire(render, ":empty")``}`;
     }
 }
 
@@ -61,6 +65,7 @@ class AppTemplate {
         ];
         const selectedTab = tabs[state.tabSelectedIndex];
 
+        /* eslint indent: off */
         render`
             <header></header>
 
@@ -100,6 +105,7 @@ class AppTemplate {
                     <account class="mb4"></account>
                     <quotes class="mb4"></quotes>
                     <toasts></toasts>
+                    <toasts2></toasts2>
                 </div>
                 <div class="flex flex-wrap flex-column min-w-75">
                     <div class="ma2 pa2">${selectedTab}</div>
@@ -1911,6 +1917,41 @@ const toasts = angular
     .service("ToastsService", ToastsService)
     .name;
 
+class Toasts2Service {
+    constructor(toasts) {
+        if (!Toasts2Service.toasts) {
+            Toasts2Service.toasts = toasts;
+        }
+    }
+
+    static getToasts() {
+        return Toasts2Service.toasts;
+    }
+
+    static addToast(message) {
+        Toasts2Service.toasts.splice(0, 0, {
+            date: (new Date()).toJSON(),
+            message
+        });
+
+        if (Toasts2Service.timeout) {
+            clearTimeout(Toasts2Service.timeout);
+        }
+        Toasts2Service.timeout = Toasts2Service.reset();
+    }
+
+    static reset() {
+        return setTimeout(() => {
+            while (Toasts2Service.toasts.length) {
+                Toasts2Service.toasts.pop();
+            }
+        }, 10000);
+    }
+}
+
+Toasts2Service.toasts = null;
+Toasts2Service.timeout = null;
+
 class TokenDialogController {
     constructor($window, ToastsService, SessionService, AccountsService, StreamingService) {
         this.$window = $window;
@@ -1964,6 +2005,7 @@ class TokenDialogController {
             angular.extend(this.accounts, accounts);
         }).catch(err => {
             this.ToastsService.addToast(err);
+            Toasts2Service.addToast(err);
             this.closeModal();
         });
     }
@@ -1994,6 +2036,7 @@ class TokenDialogController {
             this.closeModal({ tokenInfo });
         }).catch(err => {
             this.ToastsService.addToast(err);
+            Toasts2Service.addToast(err);
             this.closeModal();
         });
     }
@@ -2166,6 +2209,47 @@ const yesnoDialog = angular
     .component("yesnoDialog", yesnoDialogComponent)
     .name;
 
+class Toasts2Template {
+    static update(render, state) {
+        if (!state.toasts.length) {
+            Util.renderEmpty(render);
+            return;
+        }
+
+        /* eslint indent: off */
+        render`
+            <table class="f6 ba" cellspacing="0">
+                <tbody>
+                    <tr>${
+                        state.toasts.map(toast => hyperHTML.wire(toast, ":tr")`
+                            <td class="b--black-20 pr2"> ${toast.date} </td>
+                            <td class="b--black-20 pl2"> ${toast.message} </td>
+                    `)}</tr>
+                </tbody>
+            </table>
+        `;
+    }
+}
+
+class Toasts2Controller {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            toasts: []
+        }, state => template.update(render, state));
+
+        this.ToastsService = new Toasts2Service(this.state.toasts);
+    }
+}
+
+class Toasts2Component {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("toasts2"));
+
+        this.toasts2Controller = new Toasts2Controller(render, Toasts2Template);
+    }
+}
+
 const components = angular
     .module("components", [
         account,
@@ -2191,6 +2275,8 @@ const components = angular
         yesnoDialog
     ])
     .name;
+
+Toasts2Component.bootstrap();
 
 const root = angular
     .module("root", [
