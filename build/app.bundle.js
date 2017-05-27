@@ -25,6 +25,18 @@ class Util {
     static renderEmpty(render) {
         render`${hyperHTML.wire(render, ":empty")``}`;
     }
+
+    static pad(n) {
+        return n < 10 ? `0${n}` : n;
+    }
+
+    static getHHMMSSfromDate(date) {
+        const hours = Util.pad(date.getHours());
+        const minutes = Util.pad(date.getMinutes());
+        const seconds = Util.pad(date.getSeconds());
+
+        return `${hours}:${minutes}:${seconds}`;
+    }
 }
 
 class RootTemplate {
@@ -1930,7 +1942,7 @@ class Toasts2Service {
 
     static addToast(message) {
         Toasts2Service.toasts.splice(0, 0, {
-            date: (new Date()).toJSON(),
+            date: (new Date()),
             message
         });
 
@@ -2222,7 +2234,7 @@ class Toasts2Template {
                 <tbody>
                     <tr>${
                         state.toasts.map(toast => hyperHTML.wire(toast, ":tr")`
-                            <td class="b--black-20 pr2"> ${toast.date} </td>
+                            <td class="b--black-20 pr2"> ${Util.getHHMMSSfromDate(toast.date)} </td>
                             <td class="b--black-20 pl2"> ${toast.message} </td>
                     `)}</tr>
                 </tbody>
