@@ -31,4 +31,31 @@ export class Util {
 
         return `${hours}:${minutes}:${seconds}`;
     }
+
+    static fetch() {
+        const fetchStart = new Event("fetch:start");
+        const fetchEnd = new Event("fetch:end");
+
+        const fetchCall = fetch.apply(this, arguments);
+
+        document.dispatchEvent(fetchStart);
+
+        fetchCall.then(() => {
+            document.dispatchEvent(fetchEnd);
+        }).catch(() => {
+            document.dispatchEvent(fetchEnd);
+        });
+
+        return fetchCall;
+    }
 }
+
+Util.isLoadingView = false;
+
+document.addEventListener("fetch:start", () => {
+    Util.isLoadingView = true;
+});
+
+document.addEventListener("fetch:end", () => {
+    Util.isLoadingView = false;
+});

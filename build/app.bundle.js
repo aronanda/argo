@@ -37,7 +37,34 @@ class Util {
 
         return `${hours}:${minutes}:${seconds}`;
     }
+
+    static fetch() {
+        const fetchStart = new Event("fetchStart");
+        const fetchEnd = new Event("fetchEnd");
+
+        const fetchCall = fetch.apply(this, arguments);
+
+        document.dispatchEvent(fetchStart);
+
+        fetchCall.then(() => {
+            document.dispatchEvent(fetchEnd);
+        }).catch(() => {
+            document.dispatchEvent(fetchEnd);
+        });
+
+        return fetchCall;
+    }
 }
+
+Util.isLoadingView = false;
+
+document.addEventListener("fetchStart", () => {
+    Util.isLoadingView = true;
+});
+
+document.addEventListener("fetchEnd", () => {
+    Util.isLoadingView = false;
+});
 
 class RootTemplate {
     static update(render) {
