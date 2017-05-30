@@ -21,21 +21,20 @@
         "node": ">=6"
     },
     "dependencies": {
+        "angular": "~1.6.4",
+        "angular-mocks": "~1.6.4",
         "async": "~2.4.1",
         "body-parser": "~1.17.2",
+        "d3": "~4.9.1",
         "express": "~4.15.3",
         "faye-websocket": "~0.11.1",
         "flic": "~1.3.7",
+        "hyperhtml": "^0.11.7",
+        "introspected": "~0.2.2",
         "limiter": "~1.1.0",
         "request": "~2.81.0",
-
-        "angular": "~1.6.4",
-        "angular-mocks": "~1.6.4",
-        "hyperhtml": "~0.11.7",
-        "introspected": "~0.2.2",
-        "d3": "~4.9.1",
-        "techan": "~0.8.0",
-        "tachyons": "~4.7.4"
+        "tachyons": "~4.7.4",
+        "techan": "~0.8.0"
     },
     "optionalDependencies": {
         "electron": "~1.6.8"
