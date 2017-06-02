@@ -17,7 +17,7 @@ export class Util {
     }
 
     static renderEmpty(render) {
-        render`${hyperHTML.wire(render, ":empty")``}`;
+        return render`${hyperHTML.wire(render, ":empty")``}`;
     }
 
     static pad(n) {
@@ -47,6 +47,10 @@ export class Util {
         });
 
         return fetchCall;
+    }
+
+    static show(condition) {
+        return condition ? "display: block;" : "display: none;";
     }
 }
 

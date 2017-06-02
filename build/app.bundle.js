@@ -23,7 +23,7 @@ class Util {
     }
 
     static renderEmpty(render) {
-        render`${hyperHTML.wire(render, ":empty")``}`;
+        return render`${hyperHTML.wire(render, ":empty")``}`;
     }
 
     static pad(n) {
@@ -39,8 +39,8 @@ class Util {
     }
 
     static fetch() {
-        const fetchStart = new Event("fetchStart");
-        const fetchEnd = new Event("fetchEnd");
+        const fetchStart = new Event("fetch:start");
+        const fetchEnd = new Event("fetch:end");
 
         const fetchCall = fetch.apply(this, arguments);
 
@@ -54,15 +54,19 @@ class Util {
 
         return fetchCall;
     }
+
+    static show(condition) {
+        return condition ? "display: block;" : "display: none;";
+    }
 }
 
 Util.isLoadingView = false;
 
-document.addEventListener("fetchStart", () => {
+document.addEventListener("fetch:start", () => {
     Util.isLoadingView = true;
 });
 
-document.addEventListener("fetchEnd", () => {
+document.addEventListener("fetch:end", () => {
     Util.isLoadingView = false;
 });
 
@@ -260,7 +264,11 @@ class AccountsService {
         });
     }
 
-    getAccounts({ environment = "practice", token, accountId } = {}) {
+    getAccounts({
+        environment = "practice",
+        token = "abc",
+        accountId = "123"
+    } = {}) {
         const api = accountId ? "/api/account" : "/api/accounts";
 
         return this.$http.post(api, {
@@ -579,97 +587,6 @@ const exposureComponent = {
 const exposure = angular
     .module("components.exposure", [])
     .component("exposure", exposureComponent)
-    .name;
-
-class HeaderController {
-    constructor($window, $rootScope,
-        AccountsService, SessionService, QuotesService, StreamingService) {
-
-        this.$window = $window;
-        this.$rootScope = $rootScope;
-        this.AccountsService = AccountsService;
-        this.SessionService = SessionService;
-        this.QuotesService = QuotesService;
-        this.StreamingService = StreamingService;
-    }
-
-    $onInit() {
-        this.$rootScope.$watch("isLoadingView", () => {
-            this.isLoadingView = this.$rootScope.isLoadingView;
-        });
-    }
-
-    openTokenDialog() {
-        this.openTokenModal = true;
-    }
-
-    closeTokenDialog(tokenInfo) {
-        this.openTokenModal = false;
-
-        if (tokenInfo) {
-            this.token = tokenInfo.token;
-            this.environment = tokenInfo.environment;
-            this.accountId = tokenInfo.accountId;
-            this.instrs = tokenInfo.instrs;
-        }
-    }
-
-    openSettingsDialog() {
-        this.SessionService.isLogged().then(credentials => {
-            const allInstrs = this.AccountsService.getAccount().instruments;
-
-            angular.forEach(allInstrs, instrument => {
-                if (!this.instrs.hasOwnProperty(instrument.name)) {
-                    this.instrs[instrument.name] = false;
-                }
-            });
-
-            this.credentials = credentials;
-            this.openSettingsModal = true;
-        }).catch(err => {
-            if (err) {
-                ToastsService.addToast(err);
-            }
-        });
-    }
-
-    closeSettingsDialog(settingsInfo) {
-        let instruments;
-
-        this.openSettingsModal = false;
-
-        if (settingsInfo) {
-            this.$window.localStorage.setItem("argo.instruments",
-                angular.toJson(settingsInfo));
-            instruments = this.AccountsService
-                .setStreamingInstruments(settingsInfo);
-
-            this.QuotesService.reset();
-
-            this.StreamingService.startStream({
-                environment: this.credentials.environment,
-                accessToken: this.credentials.token,
-                accountId: this.credentials.accountId,
-                instruments
-            });
-        }
-    }
-
-}
-HeaderController.$inject = [
-    "$window", "$rootScope",
-    "AccountsService", "SessionService",
-    "QuotesService", "StreamingService"
-];
-
-const headerComponent = {
-    templateUrl: "app/components/header/header.html",
-    controller: HeaderController
-};
-
-const header = angular
-    .module("components.header", [])
-    .component("header", headerComponent)
     .name;
 
 function highlighterDirective($timeout) {
@@ -1931,112 +1848,6 @@ const streaming = angular
     .service("StreamingService", StreamingService)
     .name;
 
-class TokenDialogController {
-    constructor($window, SessionService, AccountsService, StreamingService) {
-        this.$window = $window;
-        this.SessionService = SessionService;
-        this.AccountsService = AccountsService;
-        this.StreamingService = StreamingService;
-    }
-
-    $onInit() {
-        const instrsStorage = this.$window.localStorage.getItem("argo.instruments");
-
-        this.instrs = angular.fromJson(instrsStorage) || {
-            EUR_USD: true,
-            USD_JPY: true,
-            GBP_USD: true,
-            EUR_GBP: true,
-            USD_CHF: true,
-            EUR_JPY: true,
-            EUR_CHF: true,
-            USD_CAD: true,
-            AUD_USD: true,
-            GBP_JPY: true
-        };
-
-        this.environment = "practice";
-        this.accounts = [];
-    }
-
-    login(tokenInfo) {
-        if (!tokenInfo) {
-            this.closeModal();
-            return;
-        }
-
-        this.environment = tokenInfo.environment;
-        this.token = tokenInfo.token;
-
-        this.AccountsService.getAccounts({
-            environment: this.environment,
-            token: this.token
-        }).then(accounts => {
-            const message = "If your account id contains only digits " +
-                "(ie. 2534233), it is a legacy account and you should use " +
-                "release 3.x. For v20 accounts use release 4.x or higher. " +
-                "Check your token.";
-
-            if (!accounts.length) {
-                throw new Error(message);
-            }
-            angular.extend(this.accounts, accounts);
-        }).catch(err => {
-            ToastsService.addToast(err);
-            this.closeModal();
-        });
-    }
-
-    selectAccount(accountSelected) {
-        this.accountId = this.accounts[accountSelected].id;
-
-        const tokenInfo = {
-            environment: this.environment,
-            token: this.token,
-            accountId: this.accountId,
-            instrs: this.instrs
-        };
-
-        this.SessionService.setCredentials(tokenInfo);
-
-        this.AccountsService.getAccounts(tokenInfo).then(() => {
-            const instruments = this.AccountsService
-                .setStreamingInstruments(this.instrs);
-
-            this.StreamingService.startStream({
-                environment: this.environment,
-                accessToken: this.token,
-                accountId: this.accountId,
-                instruments
-            });
-
-            this.closeModal({ tokenInfo });
-        }).catch(err => {
-            ToastsService.addToast(err);
-            this.closeModal();
-        });
-    }
-
-}
-TokenDialogController.$inject = [
-    "$window", "SessionService",
-    "AccountsService", "StreamingService"
-];
-
-const tokenDialogComponent = {
-    templateUrl: "app/components/token-dialog/token-dialog.html",
-    controller: TokenDialogController,
-    bindings: {
-        openModal: "=",
-        closeModal: "&"
-    }
-};
-
-const tokenDialog = angular
-    .module("components.token-dialog", [])
-    .component("tokenDialog", tokenDialogComponent)
-    .name;
-
 class TradesController {
     constructor(TradesService) {
         this.TradesService = TradesService;
@@ -2184,6 +1995,325 @@ const yesnoDialog = angular
     .component("yesnoDialog", yesnoDialogComponent)
     .name;
 
+class HeaderTemplate {
+    static update(render, state) {
+        /* eslint indent: off */
+        render`
+            <nav class="flex flex-row bt bb tc mw9 center shadow-2">
+
+                <div class="flex flex-wrap flex-row justify-around items-center min-w-95">
+                        <a class="logo" href="http://argo.js.org/">
+                            <img alt="Argo" src="img/logo.png">
+                        </a>
+
+                        <span class="b">Argo Interface for OANDA Trading Platform</span>
+
+                        <div style="${Util.show(state.tokenInfo.token || state.tokenInfo.environment)}">
+                            Active environment: <span class="b">${state.tokenInfo.environment}</span>
+                        </div>
+
+                        <div style="${Util.show(state.tokenInfo.accountId)}">
+                            Account Id: <span class="b">${state.tokenInfo.accountId}</span>
+                        </div>
+
+                        <div style="${Util.show(!state.tokenInfo.token)}">
+                            Please, insert the access token.
+                        </div>
+
+                        <a class="pointer f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4"
+                            style="${Util.show(state.tokenInfo.accountId)}"
+                            ng-click="$ctrl.openSettingsDialog()">
+                        <span class="pl1">Settings</span>
+                        </a>
+                        <a class="pointer f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4"
+                            onclick="${() => {
+                                state.tokenModalIsOpen = true;
+                            }}">
+                        <span class="pl1">Token</span>
+                        </a>
+                </div>
+
+                <div class="flex flex-row items-center min-w-5">
+                    <span class="${() => {
+                        if (Util.isLoadingView) {
+                            return "spinner";
+                        }
+                        return "";
+                    }}"></span>
+                </div>
+
+            </nav>
+
+            <token-dialog></token-dialog>
+            <settings-dialog open-modal="$ctrl.openSettingsModal"
+                close-modal="$ctrl.closeSettingsDialog(settingsInfo)" instruments="$ctrl.instrs">
+            </settings-dialog>
+        `;
+    }
+}
+
+class TokenDialogTemplate {
+    static update(render, state, events) {
+        if (!state.tokenModalIsOpen) {
+            Util.renderEmpty(render);
+            return;
+        }
+
+        if (!state.accounts.length) {
+            TokenDialogTemplate.renderTokenModal(render, state, events);
+        } else {
+            TokenDialogTemplate.renderAccountsListModal(render);
+        }
+    }
+
+    static renderTokenModal(render, state, events) {
+        /* eslint indent: off */
+        render`
+            <div class="fixed absolute--fill bg-black-70 z5">
+            <div class="fixed absolute-center z999">
+
+            <main class="pa4 black-80 bg-white">
+                <form ng-hide="$ctrl.accounts.length" class="measure center">
+                    <fieldset id="login" class="ba b--transparent ph0 mh0">
+                        <legend class="f4 fw6 ph0 mh0 center">Token Dialog</legend>
+
+                        <div class="flex flex-row items-center mb2 justify-between">
+                            <label for="practice" class="lh-copy">Practice</label>
+                            <input class="mr2" type="radio" name="environment" ng-model="$ctrl.environment" value="practice">
+                        </div>
+                        <div class="flex flex-row items-center justify-between mb2">
+                            <label for="live" class="lh-copy">Live</label>
+                            <input class="mr2" type="radio" name="environment" ng-model="$ctrl.environment" value="live">
+                        </div>
+
+                        <div class="mv3">
+                            <input class="b pa2 ba bg-transparent w-100"
+                                placeholder="Token" name="token" id="token" ng-model="$ctrl.token">
+                        </div>
+                    </fieldset>
+
+                    <div class="flex flex-row items-center justify-around">
+                        <input id="loginCancel" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                            type="button" value="Cancel"
+                            onclick="${() => {
+                                state.tokenModalIsOpen = false;
+                            }}">
+
+                        <input id="loginOk" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                            type="button" value="Ok"
+                            onclick="${e => {
+                                events(e, {
+                                    environment: state.tokenInfo.environment
+
+                                    // token: state.tokenInfo.token
+                                });
+                            }}">
+                    </div>
+                </form>
+            </main>
+
+            </div>
+            </div>
+        `;
+    }
+
+    static renderAccountsListModal(render) {
+        /* eslint indent: off */
+        render`
+            <div class="fixed absolute--fill bg-black-70 z5">
+            <div class="fixed absolute-center z999">
+
+            <main class="pa4 black-80 bg-white">
+                <form ng-show="$ctrl.accounts.length" class="measure center">
+                    <fieldset id="login" class="ba b--transparent ph0 mh0">
+                        <legend class="f4 fw6 ph0 mh0 center">Accounts List</legend>
+                    </fieldset>
+
+                    <div class="flex flex-row items-center justify-around">
+                        <input class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                            type="submit" value="{{ account.id }}"
+                            ng-repeat="account in $ctrl.accounts"
+                            ng-click="$ctrl.selectAccount($index)">
+                    </div>
+                </form>
+            </main>
+
+            </div>
+            </div>
+        `;
+    }
+}
+
+// import { SessionService } from "../session/session.service";
+// import { AccountsService } from "../account/accounts.service";
+// import { StreamingService } from "../streaming/streaming.service";
+// import { ToastsService } from "../toasts/toasts.service";
+
+class TokenDialogController {
+    constructor(render, template, bindings) {
+        const events = (e, payload) => Util.handleEvent(this, e, payload);
+
+        this.state = Introspected.observe(bindings,
+            state => template.update(render, state, events));
+    }
+
+    onLoginOkClick(e, tokenInfo) {
+
+        this.state.tokenModalIsOpen = false;
+
+        this.state.tokenInfo.environment = tokenInfo.environment;
+        this.state.tokenInfo.token = tokenInfo.token;
+
+    //     this.AccountsService.getAccounts({
+    //         environment: this.environment,
+    //         token: this.token
+    //     }).then(accounts => {
+    //         const message = "If your account id contains only digits " +
+    //             "(ie. 2534233), it is a legacy account and you should use " +
+    //             "release 3.x. For v20 accounts use release 4.x or higher. " +
+    //             "Check your token.";
+
+    //         if (!accounts.length) {
+    //             throw new Error(message);
+    //         }
+    //         angular.extend(this.accounts, accounts);
+    //     }).catch(err => {
+    //         ToastsService.addToast(err);
+    //         this.closeModal();
+    //     });
+    }
+
+    // selectAccount(accountSelected) {
+    //     this.accountId = this.accounts[accountSelected].id;
+
+    //     const tokenInfo = {
+    //         environment: this.environment,
+    //         token: this.token,
+    //         accountId: this.accountId,
+    //         instrs: this.instrs
+    //     };
+
+    //     this.SessionService.setCredentials(tokenInfo);
+
+    //     this.AccountsService.getAccounts(tokenInfo).then(() => {
+    //         const instruments = this.AccountsService
+    //             .setStreamingInstruments(this.instrs);
+
+    //         this.StreamingService.startStream({
+    //             environment: this.environment,
+    //             accessToken: this.token,
+    //             accountId: this.accountId,
+    //             instruments
+    //         });
+
+    //         this.closeModal({ tokenInfo });
+    //     }).catch(err => {
+    //         ToastsService.addToast(err);
+    //         this.closeModal();
+    //     });
+    // }
+
+}
+
+class TokenDialogComponent {
+    static bootstrap(state) {
+        const render = hyperHTML.bind(Util.query("token-dialog"));
+
+        this.tokenDialogController = new TokenDialogController(render, TokenDialogTemplate, state);
+    }
+}
+
+// import { AccountsService } from "../account/accounts.service";
+// import { SessionService } from "../session/session.service";
+// import { QuotesService } from "../quotes/quotes.service";
+// import { StreamingService } from "../streaming/streaming.service";
+// import { ToastsService } from "../toasts/toasts.service";
+
+class HeaderController {
+    constructor(render, template) {
+        const events = (e, payload) => Util.handleEvent(this, e, payload);
+
+        const instrsStorage = window.localStorage.getItem("argo.instruments");
+
+        const instrs = JSON.parse(instrsStorage) || {
+            EUR_USD: true,
+            USD_JPY: true,
+            GBP_USD: true,
+            EUR_GBP: true,
+            USD_CHF: true,
+            EUR_JPY: true,
+            EUR_CHF: true,
+            USD_CAD: true,
+            AUD_USD: true,
+            GBP_JPY: true
+        };
+
+        this.state = Introspected({
+            tokenModalIsOpen: false,
+            tokenInfo: {
+                environment: "",
+                token: "",
+                accountId: ""
+            },
+            accounts: [],
+            instrs
+        }, state => template.update(render, state, events));
+
+        TokenDialogComponent.bootstrap(this.state);
+    }
+
+    // openSettingsDialog() {
+    //     this.SessionService.isLogged().then(credentials => {
+    //         const allInstrs = this.AccountsService.getAccount().instruments;
+
+    //         angular.forEach(allInstrs, instrument => {
+    //             if (!this.instrs.hasOwnProperty(instrument.name)) {
+    //                 this.instrs[instrument.name] = false;
+    //             }
+    //         });
+
+    //         this.credentials = credentials;
+    //         this.openSettingsModal = true;
+    //     }).catch(err => {
+    //         if (err) {
+    //             ToastsService.addToast(err);
+    //         }
+    //     });
+    // }
+
+    // closeSettingsDialog(settingsInfo) {
+    //     let instruments;
+
+    //     this.openSettingsModal = false;
+
+    //     if (settingsInfo) {
+    //         this.$window.localStorage.setItem("argo.instruments",
+    //             angular.toJson(settingsInfo));
+    //         instruments = this.AccountsService
+    //             .setStreamingInstruments(settingsInfo);
+
+    //         this.QuotesService.reset();
+
+    //         this.StreamingService.startStream({
+    //             environment: this.credentials.environment,
+    //             accessToken: this.credentials.token,
+    //             accountId: this.credentials.accountId,
+    //             instruments
+    //         });
+    //     }
+    // }
+}
+
+class HeaderComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("header"));
+
+        this.HeaderController = new HeaderController(render, HeaderTemplate);
+    }
+}
+
+HeaderComponent.bootstrap();
+
 class ToastsTemplate {
     static update(render, state) {
         if (!state.toasts.length) {
@@ -2232,7 +2362,6 @@ const components = angular
         activity,
         charts,
         exposure,
-        header,
         highlighter,
         news,
         ohlcChart,
@@ -2245,7 +2374,6 @@ const components = angular
         settingsDialog,
         slChart,
         streaming,
-        tokenDialog,
         trades,
         yesnoDialog
     ])
