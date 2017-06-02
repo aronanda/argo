@@ -22,7 +22,11 @@ export class AccountsService {
         });
     }
 
-    getAccounts({ environment = "practice", token, accountId } = {}) {
+    getAccounts({
+        environment = "practice",
+        token = "abc",
+        accountId = "123"
+    } = {}) {
         const api = accountId ? "/api/account" : "/api/accounts";
 
         return this.$http.post(api, {
