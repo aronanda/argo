@@ -39,12 +39,7 @@ export class HeaderTemplate {
                 </div>
 
                 <div class="flex flex-row items-center min-w-5">
-                    <span class="${() => {
-                        if (Util.isLoadingView) {
-                            return "spinner";
-                        }
-                        return "";
-                    }}"></span>
+                    <span class="${Util.isLoadingView ? "spinner" : ""}}"></span>
                 </div>
 
             </nav>
