@@ -15,8 +15,9 @@ class Util {
     static handleEvent(context, e, payload) {
         const type = e.type;
         const id = e.target.id || console.warn(e.target, "target without id");
-        const method = `on${id[0].toUpperCase()}${id.slice(1)}` +
+        const method = `on${id[0].toUpperCase()}${id.split("-")[0].slice(1)}` +
             `${type[0].toUpperCase()}${type.slice(1)}`;
+
 
         return method in context ? context[method](e, payload)
             : console.warn(method, "not implemented");
@@ -26,30 +27,24 @@ class Util {
         return render`${hyperHTML.wire(render, ":empty")``}`;
     }
 
-    static pad(n) {
-        return n < 10 ? `0${n}` : n;
-    }
-
     static getHHMMSSfromDate(date) {
-        const hours = Util.pad(date.getHours());
-        const minutes = Util.pad(date.getMinutes());
-        const seconds = Util.pad(date.getSeconds());
+        const hours = date.getHours().toString().padStart(2, "0");
+        const minutes = date.getMinutes().toString().padStart(2, "0");
+        const seconds = date.getSeconds().toString().padStart(2, "0");
 
         return `${hours}:${minutes}:${seconds}`;
     }
 
-    static fetch() {
-        const fetchStart = new Event("fetch:start");
-        const fetchEnd = new Event("fetch:end");
+    static fetch(url, options) {
+        options.headers = new Headers({ "Content-Type": "application/json" });
 
-        const fetchCall = fetch.apply(this, arguments);
+        const fetchCall = fetch(url, options);
 
-        document.dispatchEvent(fetchStart);
-
+        Util.isLoadingView = true;
         fetchCall.then(() => {
-            document.dispatchEvent(fetchEnd);
+            Util.isLoadingView = false;
         }).catch(() => {
-            document.dispatchEvent(fetchEnd);
+            Util.isLoadingView = false;
         });
 
         return fetchCall;
@@ -61,14 +56,6 @@ class Util {
 }
 
 Util.isLoadingView = false;
-
-document.addEventListener("fetch:start", () => {
-    Util.isLoadingView = true;
-});
-
-document.addEventListener("fetch:end", () => {
-    Util.isLoadingView = false;
-});
 
 class RootTemplate {
     static update(render) {
@@ -224,105 +211,6 @@ const common = angular
     .module("common", [
         app
     ])
-    .name;
-
-class AccountController {
-    constructor(AccountService) {
-        this.AccountService = AccountService;
-    }
-
-    $onInit() {
-        this.account = this.AccountService.getAccount();
-    }
-}
-AccountController.$inject = ["AccountsService"];
-
-const accountComponent = {
-    templateUrl: "app/components/account/account.html",
-    controller: AccountController
-};
-
-class AccountsService {
-    constructor($http, SessionService) {
-        this.$http = $http;
-        this.SessionService = SessionService;
-
-        this.account = {};
-    }
-
-    getAccount() {
-        return this.account;
-    }
-
-    refresh() {
-        this.SessionService.isLogged().then(credentials => {
-            this.getAccounts({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId
-            });
-        });
-    }
-
-    getAccounts({
-        environment = "practice",
-        token = "abc",
-        accountId = "123"
-    } = {}) {
-        const api = accountId ? "/api/account" : "/api/accounts";
-
-        return this.$http.post(api, {
-            environment,
-            token,
-            accountId
-        }).then(response => {
-            const accounts = response.data.accounts || response.data;
-
-            if (response.data.message) {
-                throw response.data.message;
-            }
-
-            if (!accounts.length) {
-                angular.merge(this.account, response.data.account);
-
-                this.account.timestamp = new Date();
-
-                this.account.unrealizedPLPercent =
-                    this.account.unrealizedPL / this.account.balance * 100;
-
-                if (!this.account.instruments) {
-                    this.$http.post("/api/instruments", {
-                        environment,
-                        token,
-                        accountId
-                    }).then(instruments => {
-                        this.account.instruments = instruments.data;
-                        this.account.pips = {};
-                        angular.forEach(this.account.instruments, i => {
-                            this.account.pips[i.name] =
-                                Math.pow(10, i.pipLocation);
-                        });
-                    });
-                }
-            }
-
-            return accounts;
-        });
-    }
-
-    setStreamingInstruments(settings) {
-        this.account.streamingInstruments = Object.keys(settings)
-            .filter(el => !!settings[el]);
-
-        return this.account.streamingInstruments;
-    }
-}
-AccountsService.$inject = ["$http", "SessionService"];
-
-const account = angular
-    .module("components.account", [])
-    .component("account", accountComponent)
-    .service("AccountsService", AccountsService)
     .name;
 
 class ActivityController {
@@ -1630,35 +1518,6 @@ const quotes = angular
     .service("QuotesService", QuotesService)
     .name;
 
-class SessionService {
-    constructor($q) {
-        this.deferred = $q.defer();
-        this.credentials = {
-            environment: null,
-            token: null,
-            accountId: null
-        };
-    }
-
-    setCredentials(session) {
-        this.credentials.environment = session.environment;
-        this.credentials.token = session.token;
-        this.credentials.accountId = session.accountId;
-
-        this.deferred.resolve(this.credentials);
-    }
-
-    isLogged() {
-        return this.deferred.promise;
-    }
-}
-SessionService.$inject = ["$q"];
-
-const session = angular
-    .module("components.session", [])
-    .service("SessionService", SessionService)
-    .name;
-
 class SettingsDialogController {
     answer(settingsInfo) {
         this.closeModal({ settingsInfo });
@@ -2008,7 +1867,7 @@ class HeaderTemplate {
 
                         <span class="b">Argo Interface for OANDA Trading Platform</span>
 
-                        <div style="${Util.show(state.tokenInfo.token || state.tokenInfo.environment)}">
+                        <div style="${Util.show(state.tokenInfo.token)}">
                             Active environment: <span class="b">${state.tokenInfo.environment}</span>
                         </div>
 
@@ -2034,12 +1893,7 @@ class HeaderTemplate {
                 </div>
 
                 <div class="flex flex-row items-center min-w-5">
-                    <span class="${() => {
-                        if (Util.isLoadingView) {
-                            return "spinner";
-                        }
-                        return "";
-                    }}"></span>
+                    <span class="${Util.isLoadingView ? "spinner" : ""}"></span>
                 </div>
 
             </nav>
@@ -2062,7 +1916,7 @@ class TokenDialogTemplate {
         if (!state.accounts.length) {
             TokenDialogTemplate.renderTokenModal(render, state, events);
         } else {
-            TokenDialogTemplate.renderAccountsListModal(render);
+            TokenDialogTemplate.renderAccountsListModal(render, state, events);
         }
     }
 
@@ -2073,22 +1927,34 @@ class TokenDialogTemplate {
             <div class="fixed absolute-center z999">
 
             <main class="pa4 black-80 bg-white">
-                <form ng-hide="$ctrl.accounts.length" class="measure center">
+                <form class="measure center">
                     <fieldset id="login" class="ba b--transparent ph0 mh0">
                         <legend class="f4 fw6 ph0 mh0 center">Token Dialog</legend>
 
                         <div class="flex flex-row items-center mb2 justify-between">
                             <label for="practice" class="lh-copy">Practice</label>
-                            <input class="mr2" type="radio" name="environment" ng-model="$ctrl.environment" value="practice">
+                            <input class="mr2" type="radio" name="environment" value="practice"
+                                checked="${state.tokenInfo.environment === "practice"}"
+                                onchange="${e => {
+                                    state.tokenInfo.environment = e.target.value.trim();
+                                }}">
+
                         </div>
                         <div class="flex flex-row items-center justify-between mb2">
                             <label for="live" class="lh-copy">Live</label>
-                            <input class="mr2" type="radio" name="environment" ng-model="$ctrl.environment" value="live">
+                            <input class="mr2" type="radio" name="environment" value="live"
+                                checked="${state.tokenInfo.environment === "live"}"
+                                onchange="${e => {
+                                    state.tokenInfo.environment = e.target.value.trim();
+                                }}">
                         </div>
 
                         <div class="mv3">
                             <input class="b pa2 ba bg-transparent w-100"
-                                placeholder="Token" name="token" id="token" ng-model="$ctrl.token">
+                                placeholder="Token" name="token" id="token"
+                                oninput="${e => {
+                                    state.tokenInfo.token = e.target.value.trim();
+                                }}">
                         </div>
                     </fieldset>
 
@@ -2101,13 +1967,7 @@ class TokenDialogTemplate {
 
                         <input id="loginOk" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
                             type="button" value="Ok"
-                            onclick="${e => {
-                                events(e, {
-                                    environment: state.tokenInfo.environment
-
-                                    // token: state.tokenInfo.token
-                                });
-                            }}">
+                            onclick="${events}">
                     </div>
                 </form>
             </main>
@@ -2117,24 +1977,25 @@ class TokenDialogTemplate {
         `;
     }
 
-    static renderAccountsListModal(render) {
+    static renderAccountsListModal(render, state, events) {
         /* eslint indent: off */
         render`
             <div class="fixed absolute--fill bg-black-70 z5">
             <div class="fixed absolute-center z999">
 
             <main class="pa4 black-80 bg-white">
-                <form ng-show="$ctrl.accounts.length" class="measure center">
+                <form class="measure center">
                     <fieldset id="login" class="ba b--transparent ph0 mh0">
                         <legend class="f4 fw6 ph0 mh0 center">Accounts List</legend>
                     </fieldset>
 
-                    <div class="flex flex-row items-center justify-around">
-                        <input class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
-                            type="submit" value="{{ account.id }}"
-                            ng-repeat="account in $ctrl.accounts"
-                            ng-click="$ctrl.selectAccount($index)">
-                    </div>
+                    <div class="flex flex-row items-center justify-around">${
+                        state.accounts.map((account, index) => hyperHTML.wire(account, ":li")`
+                            <input id="${`selectAccount-${index}`}"
+                                class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                                type="button" value="${account.id}"
+                                onclick="${e => events(e, index)}">
+                    `)}</div>
                 </form>
             </main>
 
@@ -2144,11 +2005,110 @@ class TokenDialogTemplate {
     }
 }
 
-// import { SessionService } from "../session/session.service";
-// import { AccountsService } from "../account/accounts.service";
-// import { StreamingService } from "../streaming/streaming.service";
-// import { ToastsService } from "../toasts/toasts.service";
+class SessionService {
+    static setCredentials(session) {
+        SessionService.credentials.environment = session.environment;
+        SessionService.credentials.token = session.token;
+        SessionService.credentials.accountId = session.accountId;
+    }
 
+    static isLogged() {
+        if (SessionService.credentials.token) {
+            return SessionService.credentials;
+        }
+
+        return null;
+    }
+}
+
+SessionService.credentials = {
+    environment: null,
+    token: null,
+    accountId: null
+};
+
+class AccountsService {
+    static getAccount() {
+        return AccountsService.account;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        AccountsService.getAccounts({
+            environment: credentials.environment,
+            token: credentials.token,
+            accountId: credentials.accountId
+        });
+    }
+
+    static getAccounts({
+        environment = "practice",
+        token = "abc",
+        accountId = null
+    } = {}) {
+        const api = accountId ? "/api/account" : "/api/accounts";
+
+        return Util.fetch(api, {
+            method: "post",
+            body: JSON.stringify({
+                environment,
+                token,
+                accountId
+            })
+        }).then(res => res.json()).then(data => {
+            const accounts = data.accounts || data;
+
+            if (data.message) {
+                throw data.message;
+            }
+
+            if (!accounts.length) {
+                Object.assign(AccountsService.account, data.account);
+
+                AccountsService.account.timestamp = new Date();
+
+                AccountsService.account.unrealizedPLPercent =
+                    AccountsService.account.unrealizedPL /
+                        AccountsService.account.balance * 100;
+
+                // if (!this.account.instruments) {
+                //     this.$http.post("/api/instruments", {
+                //         environment,
+                //         token,
+                //         accountId
+                //     }).then(instruments => {
+                //         this.account.instruments = instruments.data;
+                //         this.account.pips = {};
+                //         angular.forEach(this.account.instruments, i => {
+                //             this.account.pips[i.name] =
+                //                 Math.pow(10, i.pipLocation);
+                //         });
+                //     });
+                // }
+            }
+
+            return accounts;
+        });
+    }
+
+    // setStreamingInstruments(settings) {
+    //     this.account.streamingInstruments = Object.keys(settings)
+    //         .filter(el => !!settings[el]);
+
+    //     return this.account.streamingInstruments;
+    // }
+}
+
+AccountsService.account = {};
+
+// import { SessionService } from "../session/session.service";
+
+// import { StreamingService } from "../streaming/streaming.service";
 class TokenDialogController {
     constructor(render, template, bindings) {
         const events = (e, payload) => Util.handleEvent(this, e, payload);
@@ -2157,34 +2117,32 @@ class TokenDialogController {
             state => template.update(render, state, events));
     }
 
-    onLoginOkClick(e, tokenInfo) {
+    onLoginOkClick() {
+        AccountsService.getAccounts({
+            environment: this.state.tokenInfo.environment,
+            token: this.state.tokenInfo.token
+        }).then(accounts => {
+            const message = "If your account id contains only digits " +
+                "(ie. 2534233), it is a legacy account and you should use " +
+                "release 3.x. For v20 accounts use release 4.x or higher. " +
+                "Check your token.";
 
-        this.state.tokenModalIsOpen = false;
-
-        this.state.tokenInfo.environment = tokenInfo.environment;
-        this.state.tokenInfo.token = tokenInfo.token;
-
-    //     this.AccountsService.getAccounts({
-    //         environment: this.environment,
-    //         token: this.token
-    //     }).then(accounts => {
-    //         const message = "If your account id contains only digits " +
-    //             "(ie. 2534233), it is a legacy account and you should use " +
-    //             "release 3.x. For v20 accounts use release 4.x or higher. " +
-    //             "Check your token.";
-
-    //         if (!accounts.length) {
-    //             throw new Error(message);
-    //         }
-    //         angular.extend(this.accounts, accounts);
-    //     }).catch(err => {
-    //         ToastsService.addToast(err);
-    //         this.closeModal();
-    //     });
+            if (!accounts.length) {
+                throw new Error(message);
+            }
+            accounts.forEach(item => {
+                this.state.accounts.push(item);
+            });
+        }).catch(err => {
+            this.state.tokenModalIsOpen = false;
+            ToastsService.addToast(err);
+        });
     }
 
-    // selectAccount(accountSelected) {
-    //     this.accountId = this.accounts[accountSelected].id;
+    onSelectAccountClick(e, accountSelected) {
+        this.state.tokenModalIsOpen = false;
+
+        this.state.tokenInfo.accountId = this.state.accounts[accountSelected].id;
 
     //     const tokenInfo = {
     //         environment: this.environment,
@@ -2211,7 +2169,7 @@ class TokenDialogController {
     //         ToastsService.addToast(err);
     //         this.closeModal();
     //     });
-    // }
+    }
 
 }
 
@@ -2251,7 +2209,7 @@ class HeaderController {
         this.state = Introspected({
             tokenModalIsOpen: false,
             tokenInfo: {
-                environment: "",
+                environment: "practice",
                 token: "",
                 accountId: ""
             },
@@ -2358,7 +2316,6 @@ ToastsComponent.bootstrap();
 
 const components = angular
     .module("components", [
-        account,
         activity,
         charts,
         exposure,
@@ -2370,7 +2327,6 @@ const components = angular
         plugins,
         positions,
         quotes,
-        session,
         settingsDialog,
         slChart,
         streaming,

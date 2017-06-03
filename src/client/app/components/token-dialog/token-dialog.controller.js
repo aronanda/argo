@@ -3,9 +3,11 @@ import Introspected from "introspected";
 import { Util } from "../../util";
 
 // import { SessionService } from "../session/session.service";
-// import { AccountsService } from "../account/accounts.service";
+
+import { AccountsService } from "../account/accounts.service";
+
 // import { StreamingService } from "../streaming/streaming.service";
-// import { ToastsService } from "../toasts/toasts.service";
+import { ToastsService } from "../toasts/toasts.service";
 
 export class TokenDialogController {
     constructor(render, template, bindings) {
@@ -15,34 +17,32 @@ export class TokenDialogController {
             state => template.update(render, state, events));
     }
 
-    onLoginOkClick(e, tokenInfo) {
+    onLoginOkClick() {
+        AccountsService.getAccounts({
+            environment: this.state.tokenInfo.environment,
+            token: this.state.tokenInfo.token
+        }).then(accounts => {
+            const message = "If your account id contains only digits " +
+                "(ie. 2534233), it is a legacy account and you should use " +
+                "release 3.x. For v20 accounts use release 4.x or higher. " +
+                "Check your token.";
 
-        this.state.tokenModalIsOpen = false;
-
-        this.state.tokenInfo.environment = tokenInfo.environment;
-        this.state.tokenInfo.token = tokenInfo.token;
-
-    //     this.AccountsService.getAccounts({
-    //         environment: this.environment,
-    //         token: this.token
-    //     }).then(accounts => {
-    //         const message = "If your account id contains only digits " +
-    //             "(ie. 2534233), it is a legacy account and you should use " +
-    //             "release 3.x. For v20 accounts use release 4.x or higher. " +
-    //             "Check your token.";
-
-    //         if (!accounts.length) {
-    //             throw new Error(message);
-    //         }
-    //         angular.extend(this.accounts, accounts);
-    //     }).catch(err => {
-    //         ToastsService.addToast(err);
-    //         this.closeModal();
-    //     });
+            if (!accounts.length) {
+                throw new Error(message);
+            }
+            accounts.forEach(item => {
+                this.state.accounts.push(item);
+            });
+        }).catch(err => {
+            this.state.tokenModalIsOpen = false;
+            ToastsService.addToast(err);
+        });
     }
 
-    // selectAccount(accountSelected) {
-    //     this.accountId = this.accounts[accountSelected].id;
+    onSelectAccountClick(e, accountSelected) {
+        this.state.tokenModalIsOpen = false;
+
+        this.state.tokenInfo.accountId = this.state.accounts[accountSelected].id;
 
     //     const tokenInfo = {
     //         environment: this.environment,
@@ -69,6 +69,6 @@ export class TokenDialogController {
     //         ToastsService.addToast(err);
     //         this.closeModal();
     //     });
-    // }
+    }
 
 }

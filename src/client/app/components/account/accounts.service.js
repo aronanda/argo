@@ -1,78 +1,81 @@
-import angular from "angular";
+import { Util } from "../../util";
+import { SessionService } from "../session/session.service";
 
 export class AccountsService {
-    constructor($http, SessionService) {
-        this.$http = $http;
-        this.SessionService = SessionService;
-
-        this.account = {};
+    static getAccount() {
+        return AccountsService.account;
     }
 
-    getAccount() {
-        return this.account;
-    }
+    static refresh() {
+        const credentials = SessionService.isLogged();
 
-    refresh() {
-        this.SessionService.isLogged().then(credentials => {
-            this.getAccounts({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId
-            });
+        if (!credentials) {
+            return;
+        }
+
+        AccountsService.getAccounts({
+            environment: credentials.environment,
+            token: credentials.token,
+            accountId: credentials.accountId
         });
     }
 
-    getAccounts({
+    static getAccounts({
         environment = "practice",
         token = "abc",
-        accountId = "123"
+        accountId = null
     } = {}) {
         const api = accountId ? "/api/account" : "/api/accounts";
 
-        return this.$http.post(api, {
-            environment,
-            token,
-            accountId
-        }).then(response => {
-            const accounts = response.data.accounts || response.data;
+        return Util.fetch(api, {
+            method: "post",
+            body: JSON.stringify({
+                environment,
+                token,
+                accountId
+            })
+        }).then(res => res.json()).then(data => {
+            const accounts = data.accounts || data;
 
-            if (response.data.message) {
-                throw response.data.message;
+            if (data.message) {
+                throw data.message;
             }
 
             if (!accounts.length) {
-                angular.merge(this.account, response.data.account);
+                Object.assign(AccountsService.account, data.account);
 
-                this.account.timestamp = new Date();
+                AccountsService.account.timestamp = new Date();
 
-                this.account.unrealizedPLPercent =
-                    this.account.unrealizedPL / this.account.balance * 100;
+                AccountsService.account.unrealizedPLPercent =
+                    AccountsService.account.unrealizedPL /
+                        AccountsService.account.balance * 100;
 
-                if (!this.account.instruments) {
-                    this.$http.post("/api/instruments", {
-                        environment,
-                        token,
-                        accountId
-                    }).then(instruments => {
-                        this.account.instruments = instruments.data;
-                        this.account.pips = {};
-                        angular.forEach(this.account.instruments, i => {
-                            this.account.pips[i.name] =
-                                Math.pow(10, i.pipLocation);
-                        });
-                    });
-                }
+                // if (!this.account.instruments) {
+                //     this.$http.post("/api/instruments", {
+                //         environment,
+                //         token,
+                //         accountId
+                //     }).then(instruments => {
+                //         this.account.instruments = instruments.data;
+                //         this.account.pips = {};
+                //         angular.forEach(this.account.instruments, i => {
+                //             this.account.pips[i.name] =
+                //                 Math.pow(10, i.pipLocation);
+                //         });
+                //     });
+                // }
             }
 
             return accounts;
         });
     }
 
-    setStreamingInstruments(settings) {
-        this.account.streamingInstruments = Object.keys(settings)
-            .filter(el => !!settings[el]);
+    // setStreamingInstruments(settings) {
+    //     this.account.streamingInstruments = Object.keys(settings)
+    //         .filter(el => !!settings[el]);
 
-        return this.account.streamingInstruments;
-    }
+    //     return this.account.streamingInstruments;
+    // }
 }
-AccountsService.$inject = ["$http", "SessionService"];
+
+AccountsService.account = {};

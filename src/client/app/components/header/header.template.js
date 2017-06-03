@@ -13,7 +13,7 @@ export class HeaderTemplate {
 
                         <span class="b">Argo Interface for OANDA Trading Platform</span>
 
-                        <div style="${Util.show(state.tokenInfo.token || state.tokenInfo.environment)}">
+                        <div style="${Util.show(state.tokenInfo.token)}">
                             Active environment: <span class="b">${state.tokenInfo.environment}</span>
                         </div>
 
@@ -39,7 +39,7 @@ export class HeaderTemplate {
                 </div>
 
                 <div class="flex flex-row items-center min-w-5">
-                    <span class="${Util.isLoadingView ? "spinner" : ""}}"></span>
+                    <span class="${Util.isLoadingView ? "spinner" : ""}"></span>
                 </div>
 
             </nav>

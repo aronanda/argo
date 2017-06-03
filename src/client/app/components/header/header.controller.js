@@ -31,7 +31,7 @@ export class HeaderController {
         this.state = Introspected({
             tokenModalIsOpen: false,
             tokenInfo: {
-                environment: "",
+                environment: "practice",
                 token: "",
                 accountId: ""
             },
