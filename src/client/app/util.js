@@ -32,13 +32,11 @@ export class Util {
         const fetchCall = fetch(url, options);
 
         Util.isLoadingView = true;
-        setTimeout(() => {
-            fetchCall.then(() => {
-                Util.isLoadingView = false;
-            }).catch(() => {
-                Util.isLoadingView = false;
-            });
-        }, 500);
+        fetchCall.then(() => {
+            Util.isLoadingView = false;
+        }).catch(() => {
+            Util.isLoadingView = false;
+        });
 
         return fetchCall;
     }
