@@ -20,14 +20,10 @@ export class Util {
         return render`${hyperHTML.wire(render, ":empty")``}`;
     }
 
-    static pad(n) {
-        return n < 10 ? `0${n}` : n;
-    }
-
     static getHHMMSSfromDate(date) {
-        const hours = Util.pad(date.getHours());
-        const minutes = Util.pad(date.getMinutes());
-        const seconds = Util.pad(date.getSeconds());
+        const hours = date.getHours().toString().padStart(2, "0");
+        const minutes = date.getMinutes().toString().padStart(2, "0");
+        const seconds = date.getSeconds().toString().padStart(2, "0");
 
         return `${hours}:${minutes}:${seconds}`;
     }
