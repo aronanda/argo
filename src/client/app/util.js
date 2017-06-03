@@ -28,19 +28,17 @@ export class Util {
         return `${hours}:${minutes}:${seconds}`;
     }
 
-    static fetch() {
-        const fetchStart = new Event("fetch:start");
-        const fetchEnd = new Event("fetch:end");
+    static fetch(url, options) {
+        const fetchCall = fetch(url, options);
 
-        const fetchCall = fetch.apply(this, arguments);
-
-        document.dispatchEvent(fetchStart);
-
-        fetchCall.then(() => {
-            document.dispatchEvent(fetchEnd);
-        }).catch(() => {
-            document.dispatchEvent(fetchEnd);
-        });
+        Util.isLoadingView = true;
+        setTimeout(() => {
+            fetchCall.then(() => {
+                Util.isLoadingView = false;
+            }).catch(() => {
+                Util.isLoadingView = false;
+            });
+        }, 500);
 
         return fetchCall;
     }
@@ -51,11 +49,3 @@ export class Util {
 }
 
 Util.isLoadingView = false;
-
-document.addEventListener("fetch:start", () => {
-    Util.isLoadingView = true;
-});
-
-document.addEventListener("fetch:end", () => {
-    Util.isLoadingView = false;
-});
