@@ -2,6 +2,12 @@ import { Util } from "../../util";
 import { SessionService } from "../session/session.service";
 
 export class AccountsService {
+    constructor(account) {
+        if (!AccountsService.account) {
+            AccountsService.account = account;
+        }
+    }
+
     static getAccount() {
         return AccountsService.account;
     }
@@ -81,4 +87,4 @@ export class AccountsService {
     }
 }
 
-AccountsService.account = {};
+AccountsService.account = null;

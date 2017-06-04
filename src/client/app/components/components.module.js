@@ -15,6 +15,7 @@
 // import { trades } from "./trades/trades.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
+import "../components/account/account.module";
 import "../components/header/header.module";
 import "../components/session/session.module";
 import "../components/toasts/toasts.module";

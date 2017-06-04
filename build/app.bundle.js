@@ -26,6 +26,10 @@ class Util {
     }
 
     static getHHMMSSfromDate(date) {
+        if (!date) {
+            return "";
+        }
+
         const hours = date.getHours().toString().padStart(2, "0");
         const minutes = date.getMinutes().toString().padStart(2, "0");
         const seconds = date.getSeconds().toString().padStart(2, "0");
@@ -164,6 +168,227 @@ class AppComponent {
 }
 
 AppComponent.bootstrap();
+
+class AccountTemplate {
+    static update(render, state) {
+        if (state.account.id.toString()) {
+            AccountTemplate.renderAccount(render, state);
+        } else {
+            AccountTemplate.renderNoAccount(render);
+        }
+    }
+
+    static renderAccount(render, state) {
+        const timestamp = Util.getHHMMSSfromDate(new Date(state.account.timestamp));
+        const balance = parseFloat(state.account.balance).toFixed(2);
+        const unrealizedPL = parseFloat(state.account.unrealizedPL).toFixed(2);
+        const unrealizedPLPercent = parseFloat(state.account.unrealizedPLPercent).toFixed(2);
+        const NAV = parseFloat(state.account.NAV).toFixed(2);
+        const pl = parseFloat(state.account.pl).toFixed(2);
+        const marginCallMarginUsed = parseFloat(state.account.marginCallMarginUsed).toFixed(2);
+        const marginAvailable = parseFloat(state.account.marginAvailable).toFixed(2);
+        const marginCloseoutPositionValue = parseFloat(state.account.marginCloseoutPositionValue).toFixed(2);
+        const marginCloseoutPercent = parseFloat(state.account.marginCloseoutPercent).toFixed(2);
+        const positionValue = parseFloat(state.account.positionValue).toFixed(2);
+
+        /* eslint indent: off */
+        render`
+            <div class="h6 overflow-auto">
+                <table class="collapse f6 w-100 mw8 center">
+                    <thead>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1">Account Summary</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1">
+                            ${timestamp} (${state.account.currency})
+                        </th>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Balance</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${balance}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Unrealized P&amp;L</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${unrealizedPL}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Unrealized P&amp;L (%)</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${unrealizedPLPercent}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Net Asset Value</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${NAV}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Realized P&amp;L</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${pl}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Margin Used</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${marginCallMarginUsed}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Margin Available</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${marginAvailable}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Margin Closeout Value</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${marginCloseoutPositionValue}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Margin Closeout Value (%)</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${marginCloseoutPercent}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw6 bb b--black-20 tl pb1 pr1">Position Value</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">${positionValue}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    static renderNoAccount(render) {
+        /* eslint indent: off */
+        render`
+            <div class="h6 overflow-auto">
+                <p class="f6 w-100 mw8 center b">No account.</p>
+            </div>
+        `;
+    }
+}
+
+class SessionService {
+    static setCredentials(session) {
+        SessionService.credentials.environment = session.environment;
+        SessionService.credentials.token = session.token;
+        SessionService.credentials.accountId = session.accountId;
+    }
+
+    static isLogged() {
+        if (SessionService.credentials.token) {
+            return SessionService.credentials;
+        }
+
+        return null;
+    }
+}
+
+SessionService.credentials = {
+    environment: null,
+    token: null,
+    accountId: null
+};
+
+class AccountsService {
+    constructor(account) {
+        if (!AccountsService.account) {
+            AccountsService.account = account;
+        }
+    }
+
+    static getAccount() {
+        return AccountsService.account;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        AccountsService.getAccounts({
+            environment: credentials.environment,
+            token: credentials.token,
+            accountId: credentials.accountId
+        });
+    }
+
+    static getAccounts({
+        environment = "practice",
+        token = "abc",
+        accountId = null
+    } = {}) {
+        const api = accountId ? "/api/account" : "/api/accounts";
+
+        return Util.fetch(api, {
+            method: "post",
+            body: JSON.stringify({
+                environment,
+                token,
+                accountId
+            })
+        }).then(res => res.json()).then(data => {
+            const accounts = data.accounts || data;
+
+            if (data.message) {
+                throw data.message;
+            }
+
+            if (!accounts.length) {
+                Object.assign(AccountsService.account, data.account);
+
+                AccountsService.account.timestamp = new Date();
+
+                AccountsService.account.unrealizedPLPercent =
+                    AccountsService.account.unrealizedPL /
+                        AccountsService.account.balance * 100;
+
+                if (!AccountsService.account.instruments) {
+                    Util.fetch("/api/instruments", {
+                        method: "post",
+                        body: JSON.stringify({
+                            environment,
+                            token,
+                            accountId
+                        })
+                    }).then(res => res.json()).then(instruments => {
+                        AccountsService.account.instruments = instruments;
+                        AccountsService.account.pips = {};
+                        AccountsService.account.instruments.forEach(i => {
+                            AccountsService.account.pips[i.name] =
+                                Math.pow(10, i.pipLocation);
+                        });
+                    });
+                }
+            }
+
+            return accounts;
+        });
+    }
+
+    static setStreamingInstruments(settings) {
+        AccountsService.account.streamingInstruments = Object.keys(settings)
+            .filter(el => !!settings[el]);
+
+        return AccountsService.account.streamingInstruments;
+    }
+}
+
+AccountsService.account = null;
+
+class AccountController {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            account: {}
+        }, state => template.update(render, state));
+
+        this.accountsService = new AccountsService(this.state.account);
+    }
+}
+
+class AccountComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("account"));
+
+        this.accountController = new AccountController(render, AccountTemplate);
+    }
+}
+
+AccountComponent.bootstrap();
 
 class HeaderTemplate {
     static update(render, state) {
@@ -315,110 +540,6 @@ class TokenDialogTemplate {
         `;
     }
 }
-
-class SessionService {
-    static setCredentials(session) {
-        SessionService.credentials.environment = session.environment;
-        SessionService.credentials.token = session.token;
-        SessionService.credentials.accountId = session.accountId;
-    }
-
-    static isLogged() {
-        if (SessionService.credentials.token) {
-            return SessionService.credentials;
-        }
-
-        return null;
-    }
-}
-
-SessionService.credentials = {
-    environment: null,
-    token: null,
-    accountId: null
-};
-
-class AccountsService {
-    static getAccount() {
-        return AccountsService.account;
-    }
-
-    static refresh() {
-        const credentials = SessionService.isLogged();
-
-        if (!credentials) {
-            return;
-        }
-
-        AccountsService.getAccounts({
-            environment: credentials.environment,
-            token: credentials.token,
-            accountId: credentials.accountId
-        });
-    }
-
-    static getAccounts({
-        environment = "practice",
-        token = "abc",
-        accountId = null
-    } = {}) {
-        const api = accountId ? "/api/account" : "/api/accounts";
-
-        return Util.fetch(api, {
-            method: "post",
-            body: JSON.stringify({
-                environment,
-                token,
-                accountId
-            })
-        }).then(res => res.json()).then(data => {
-            const accounts = data.accounts || data;
-
-            if (data.message) {
-                throw data.message;
-            }
-
-            if (!accounts.length) {
-                Object.assign(AccountsService.account, data.account);
-
-                AccountsService.account.timestamp = new Date();
-
-                AccountsService.account.unrealizedPLPercent =
-                    AccountsService.account.unrealizedPL /
-                        AccountsService.account.balance * 100;
-
-                if (!AccountsService.account.instruments) {
-                    Util.fetch("/api/instruments", {
-                        method: "post",
-                        body: JSON.stringify({
-                            environment,
-                            token,
-                            accountId
-                        })
-                    }).then(res => res.json()).then(instruments => {
-                        AccountsService.account.instruments = instruments;
-                        AccountsService.account.pips = {};
-                        AccountsService.account.instruments.forEach(i => {
-                            AccountsService.account.pips[i.name] =
-                                Math.pow(10, i.pipLocation);
-                        });
-                    });
-                }
-            }
-
-            return accounts;
-        });
-    }
-
-    static setStreamingInstruments(settings) {
-        AccountsService.account.streamingInstruments = Object.keys(settings)
-            .filter(el => !!settings[el]);
-
-        return AccountsService.account.streamingInstruments;
-    }
-}
-
-AccountsService.account = {};
 
 class ToastsService {
     constructor(toasts) {
