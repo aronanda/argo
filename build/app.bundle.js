@@ -44,11 +44,11 @@ class Util {
 
         const fetchCall = fetch(url, options);
 
-        Util.isLoadingView = true;
+        Util.spinnerState.isLoadingView = true;
         fetchCall.then(() => {
-            Util.isLoadingView = false;
+            Util.spinnerState.isLoadingView = false;
         }).catch(() => {
-            Util.isLoadingView = false;
+            Util.spinnerState.isLoadingView = false;
         });
 
         return fetchCall;
@@ -59,7 +59,7 @@ class Util {
     }
 }
 
-Util.isLoadingView = false;
+Util.spinnerState = null;
 
 class RootTemplate {
     static update(render) {
@@ -2080,37 +2080,38 @@ class AccountsService {
                     AccountsService.account.unrealizedPL /
                         AccountsService.account.balance * 100;
 
-                // if (!this.account.instruments) {
-                //     this.$http.post("/api/instruments", {
-                //         environment,
-                //         token,
-                //         accountId
-                //     }).then(instruments => {
-                //         this.account.instruments = instruments.data;
-                //         this.account.pips = {};
-                //         angular.forEach(this.account.instruments, i => {
-                //             this.account.pips[i.name] =
-                //                 Math.pow(10, i.pipLocation);
-                //         });
-                //     });
-                // }
+                if (!AccountsService.account.instruments) {
+                    Util.fetch("/api/instruments", {
+                        method: "post",
+                        body: JSON.stringify({
+                            environment,
+                            token,
+                            accountId
+                        })
+                    }).then(res => res.json()).then(instruments => {
+                        AccountsService.account.instruments = instruments;
+                        AccountsService.account.pips = {};
+                        AccountsService.account.instruments.forEach(i => {
+                            AccountsService.account.pips[i.name] =
+                                Math.pow(10, i.pipLocation);
+                        });
+                    });
+                }
             }
 
             return accounts;
         });
     }
 
-    // setStreamingInstruments(settings) {
-    //     this.account.streamingInstruments = Object.keys(settings)
-    //         .filter(el => !!settings[el]);
+    static setStreamingInstruments(settings) {
+        AccountsService.account.streamingInstruments = Object.keys(settings)
+            .filter(el => !!settings[el]);
 
-    //     return this.account.streamingInstruments;
-    // }
+        return AccountsService.account.streamingInstruments;
+    }
 }
 
 AccountsService.account = {};
-
-// import { SessionService } from "../session/session.service";
 
 // import { StreamingService } from "../streaming/streaming.service";
 class TokenDialogController {
@@ -2144,35 +2145,33 @@ class TokenDialogController {
     }
 
     onSelectAccountClick(e, accountSelected) {
-        this.state.tokenModalIsOpen = false;
-
         this.state.tokenInfo.accountId = this.state.accounts[accountSelected].id;
 
-    //     const tokenInfo = {
-    //         environment: this.environment,
-    //         token: this.token,
-    //         accountId: this.accountId,
-    //         instrs: this.instrs
-    //     };
+        const tokenInfo = {
+            environment: this.state.tokenInfo.environment,
+            token: this.state.tokenInfo.token,
+            accountId: this.state.tokenInfo.accountId,
+            instrs: this.state.instrs
+        };
 
-    //     this.SessionService.setCredentials(tokenInfo);
+        SessionService.setCredentials(tokenInfo);
 
-    //     this.AccountsService.getAccounts(tokenInfo).then(() => {
-    //         const instruments = this.AccountsService
-    //             .setStreamingInstruments(this.instrs);
+        AccountsService.getAccounts(tokenInfo).then(() => {
+            const instruments = AccountsService
+                .setStreamingInstruments(this.state.instrs);
 
-    //         this.StreamingService.startStream({
-    //             environment: this.environment,
-    //             accessToken: this.token,
-    //             accountId: this.accountId,
-    //             instruments
-    //         });
+            // this.StreamingService.startStream({
+            //     environment: this.environment,
+            //     accessToken: this.token,
+            //     accountId: this.accountId,
+            //     instruments
+            // });
 
-    //         this.closeModal({ tokenInfo });
-    //     }).catch(err => {
-    //         ToastsService.addToast(err);
-    //         this.closeModal();
-    //     });
+            this.state.tokenModalIsOpen = false;
+        }).catch(err => {
+            ToastsService.addToast(err);
+            this.state.tokenModalIsOpen = false;
+        });
     }
 
 }
@@ -2211,6 +2210,7 @@ class HeaderController {
         };
 
         this.state = Introspected({
+            isLoadingView: false,
             tokenModalIsOpen: false,
             tokenInfo: {
                 environment: "practice",
@@ -2220,6 +2220,8 @@ class HeaderController {
             accounts: [],
             instrs
         }, state => template.update(render, state, events));
+
+        Util.spinnerState = this.state;
 
         TokenDialogComponent.bootstrap(this.state);
     }

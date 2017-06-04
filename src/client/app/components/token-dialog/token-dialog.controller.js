@@ -2,8 +2,7 @@ import Introspected from "introspected";
 
 import { Util } from "../../util";
 
-// import { SessionService } from "../session/session.service";
-
+import { SessionService } from "../session/session.service";
 import { AccountsService } from "../account/accounts.service";
 
 // import { StreamingService } from "../streaming/streaming.service";
@@ -40,35 +39,33 @@ export class TokenDialogController {
     }
 
     onSelectAccountClick(e, accountSelected) {
-        this.state.tokenModalIsOpen = false;
-
         this.state.tokenInfo.accountId = this.state.accounts[accountSelected].id;
 
-    //     const tokenInfo = {
-    //         environment: this.environment,
-    //         token: this.token,
-    //         accountId: this.accountId,
-    //         instrs: this.instrs
-    //     };
+        const tokenInfo = {
+            environment: this.state.tokenInfo.environment,
+            token: this.state.tokenInfo.token,
+            accountId: this.state.tokenInfo.accountId,
+            instrs: this.state.instrs
+        };
 
-    //     this.SessionService.setCredentials(tokenInfo);
+        SessionService.setCredentials(tokenInfo);
 
-    //     this.AccountsService.getAccounts(tokenInfo).then(() => {
-    //         const instruments = this.AccountsService
-    //             .setStreamingInstruments(this.instrs);
+        AccountsService.getAccounts(tokenInfo).then(() => {
+            const instruments = AccountsService
+                .setStreamingInstruments(this.state.instrs);
 
-    //         this.StreamingService.startStream({
-    //             environment: this.environment,
-    //             accessToken: this.token,
-    //             accountId: this.accountId,
-    //             instruments
-    //         });
+            // this.StreamingService.startStream({
+            //     environment: this.environment,
+            //     accessToken: this.token,
+            //     accountId: this.accountId,
+            //     instruments
+            // });
 
-    //         this.closeModal({ tokenInfo });
-    //     }).catch(err => {
-    //         ToastsService.addToast(err);
-    //         this.closeModal();
-    //     });
+            this.state.tokenModalIsOpen = false;
+        }).catch(err => {
+            ToastsService.addToast(err);
+            this.state.tokenModalIsOpen = false;
+        });
     }
 
 }
