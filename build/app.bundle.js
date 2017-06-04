@@ -167,56 +167,6 @@ class AppComponent {
 
 AppComponent.bootstrap();
 
-function appConfig($httpProvider, $locationProvider) {
-    const interceptors = $httpProvider.interceptors;
-
-    interceptors.push(["$q", "$rootScope", ($q, $rootScope) => {
-        let nLoadings = 0;
-
-        return {
-            request(request) {
-                nLoadings += 1;
-
-                $rootScope.isLoadingView = true;
-
-                return request;
-            },
-
-            response(response) {
-                nLoadings -= 1;
-                if (nLoadings === 0) {
-                    $rootScope.isLoadingView = false;
-                }
-
-                return response;
-            },
-
-            responseError(response) {
-                nLoadings -= 1;
-                if (!nLoadings) {
-                    $rootScope.isLoadingView = false;
-                }
-
-                return $q.reject(response);
-            }
-        };
-    }]);
-
-    $locationProvider.html5Mode(true);
-}
-appConfig.$inject = ["$httpProvider", "$locationProvider"];
-
-const app = angular
-    .module("common.app", [])
-    .config(appConfig)
-    .name;
-
-const common = angular
-    .module("common", [
-        app
-    ])
-    .name;
-
 class ActivityController {
     constructor(ActivityService) {
         this.ActivityService = ActivityService;
@@ -2343,7 +2293,6 @@ const components = angular
 
 const root = angular
     .module("root", [
-        common,
         components
     ])
     .name;
