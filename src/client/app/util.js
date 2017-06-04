@@ -38,11 +38,11 @@ export class Util {
 
         const fetchCall = fetch(url, options);
 
-        Util.isLoadingView = true;
+        Util.spinnerState.isLoadingView = true;
         fetchCall.then(() => {
-            Util.isLoadingView = false;
+            Util.spinnerState.isLoadingView = false;
         }).catch(() => {
-            Util.isLoadingView = false;
+            Util.spinnerState.isLoadingView = false;
         });
 
         return fetchCall;
@@ -53,4 +53,4 @@ export class Util {
     }
 }
 
-Util.isLoadingView = false;
+Util.spinnerState = null;
