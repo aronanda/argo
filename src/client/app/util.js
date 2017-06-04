@@ -30,7 +30,11 @@ export class Util {
     }
 
     static fetch(url, options) {
-        options.headers = new Headers({ "Content-Type": "application/json" });
+        options.headers = options.headers ||
+            { "Content-Type": "application/json" };
+
+        options.body = typeof options.body === "string" ? options.body
+            : JSON.stringify(options.body);
 
         const fetchCall = fetch(url, options);
 
