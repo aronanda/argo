@@ -29,7 +29,9 @@ export class HeaderController {
         };
 
         this.state = Introspected({
-            isLoadingView: false,
+            spinner: {
+                isLoadingView: false,
+            },
             tokenModalIsOpen: false,
             tokenInfo: {
                 environment: "practice",
@@ -40,7 +42,7 @@ export class HeaderController {
             instrs
         }, state => template.update(render, state, events));
 
-        Util.spinnerState = this.state;
+        Util.spinnerState = this.state.spinner;
 
         TokenDialogComponent.bootstrap(this.state);
     }
