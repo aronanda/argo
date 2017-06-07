@@ -5,7 +5,7 @@ import { Util } from "../../util";
 import { SessionService } from "../session/session.service";
 import { AccountsService } from "../account/accounts.service";
 
-// import { StreamingService } from "../streaming/streaming.service";
+import { StreamingService } from "../streaming/streaming.service";
 import { ToastsService } from "../toasts/toasts.service";
 
 export class TokenDialogController {
@@ -54,12 +54,12 @@ export class TokenDialogController {
             const instruments = AccountsService
                 .setStreamingInstruments(this.state.instrs);
 
-            // this.StreamingService.startStream({
-            //     environment: this.environment,
-            //     accessToken: this.token,
-            //     accountId: this.accountId,
-            //     instruments
-            // });
+            StreamingService.startStream({
+                environment: tokenInfo.environment,
+                accessToken: tokenInfo.token,
+                accountId: tokenInfo.accountId,
+                instruments
+            });
 
             this.state.tokenModalIsOpen = false;
         }).catch(err => {

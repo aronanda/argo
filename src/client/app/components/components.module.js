@@ -11,12 +11,12 @@
 // import { quotes } from "./quotes/quotes.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
-// import { streaming } from "./streaming/streaming.module";
 // import { trades } from "./trades/trades.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
-import "../components/account/account.module";
-import "../components/header/header.module";
-import "../components/session/session.module";
-import "../components/toasts/toasts.module";
-import "../components/token-dialog/token-dialog.module";
+import "./account/account.module";
+import "./header/header.module";
+import "./session/session.module";
+import "./streaming/streaming.module";
+import "./toasts/toasts.module";
+import "./token-dialog/token-dialog.module";
