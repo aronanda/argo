@@ -30,7 +30,7 @@ export class HeaderController {
 
         this.state = Introspected({
             spinner: {
-                isLoadingView: false,
+                isLoadingView: false
             },
             tokenModalIsOpen: false,
             tokenInfo: {
