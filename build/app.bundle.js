@@ -61,7 +61,7 @@ class Util {
     }
 }
 
-Util.spinnerState = null;
+Util.spinnerState = {};
 
 class RootTemplate {
     static update(render) {
@@ -429,7 +429,7 @@ class HeaderTemplate {
                 </div>
 
                 <div class="flex flex-row items-center min-w-5">
-                    <span class="${Util.isLoadingView ? "spinner" : ""}"></span>
+                    <span class="${Util.spinnerState.isLoadingView ? "spinner" : ""}"></span>
                 </div>
 
             </nav>

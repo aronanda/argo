@@ -57,4 +57,4 @@ export class Util {
     }
 }
 
-Util.spinnerState = null;
+Util.spinnerState = {};
