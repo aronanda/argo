@@ -8,7 +8,6 @@
 // import { orders } from "./orders/orders.module";
 // import { plugins } from "./plugins/plugins.module";
 // import { positions } from "./positions/positions.module";
-// import { quotes } from "./quotes/quotes.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
 // import { trades } from "./trades/trades.module";
@@ -16,6 +15,7 @@
 
 import "./account/account.module";
 import "./header/header.module";
+import "./quotes/quotes.module";
 import "./session/session.module";
 import "./streaming/streaming.module";
 import "./toasts/toasts.module";

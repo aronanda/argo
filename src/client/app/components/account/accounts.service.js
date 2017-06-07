@@ -56,7 +56,7 @@ export class AccountsService {
                     AccountsService.account.unrealizedPL /
                         AccountsService.account.balance * 100;
 
-                if (!AccountsService.account.instruments) {
+                if (JSON.stringify(AccountsService.account.instruments) === "{}") {
                     Util.fetch("/api/instruments", {
                         method: "post",
                         body: JSON.stringify({

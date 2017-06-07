@@ -336,7 +336,7 @@ class AccountsService {
                     AccountsService.account.unrealizedPL /
                         AccountsService.account.balance * 100;
 
-                if (!AccountsService.account.instruments) {
+                if (JSON.stringify(AccountsService.account.instruments) === "{}") {
                     Util.fetch("/api/instruments", {
                         method: "post",
                         body: JSON.stringify({
@@ -576,6 +576,61 @@ class ToastsService {
 ToastsService.toasts = null;
 ToastsService.timeout = null;
 
+class QuotesService {
+    constructor(quotes) {
+        if (!QuotesService.quotes) {
+            QuotesService.quotes = quotes;
+        }
+    }
+
+    static getQuotes() {
+        return QuotesService.quotes;
+    }
+
+    static updateTick(tick) {
+        const account = AccountsService.getAccount(),
+            streamingInstruments = account.streamingInstruments,
+            pips = account.pips,
+            instrument = tick.instrument;
+
+        QuotesService.quotes[instrument] = {
+            time: tick.time,
+            ask: tick.ask,
+            bid: tick.bid,
+            spread: ((tick.ask - tick.bid) / pips[instrument]).toFixed(1)
+        };
+
+
+        const accountInstruments = JSON.stringify(streamingInstruments);
+        const ticksInstruments = JSON.stringify(
+            Object.keys(QuotesService.quotes));
+
+        if (accountInstruments !== ticksInstruments) {
+            streamingInstruments.forEach(instr => {
+                let temp;
+
+                if (JSON.stringify(QuotesService.quotes[instr]) !== "{}") {
+                    temp = QuotesService.quotes[instr];
+                    QuotesService.quotes[instr] = {};
+                    QuotesService.quotes[instr] = temp;
+                }
+            });
+        }
+    }
+
+    static reset() {
+        let key;
+
+        for (key in QuotesService.quotes) {
+            if (QuotesService.quotes.hasOwnProperty(key)) {
+                delete QuotesService.quotes[key];
+            }
+        }
+    }
+}
+
+QuotesService.quotes = null;
+
 class StreamingService {
     static startStream(data) {
         Util.fetch("/api/startstream", {
@@ -621,13 +676,15 @@ class StreamingService {
                             data.closeoutBid
                     };
 
-                    // this.QuotesService.updateTick(tick);
+                    QuotesService.updateTick(tick);
+
                     // this.TradesService.updateTrades(tick);
                     // this.OrdersService.updateOrders(tick);
                 }
 
                 if (isTransaction) {
                     transaction = data;
+
                     // this.ActivityService.addActivity(transaction);
 
                     // this.TradesService.refresh();
@@ -636,6 +693,7 @@ class StreamingService {
                 }
 
                 if (refreshPlugins) {
+
                     // this.PluginsService.refresh();
                 }
             } catch (e) {
@@ -813,6 +871,60 @@ class HeaderComponent {
 
 HeaderComponent.bootstrap();
 
+class QuotesTemplate {
+    static update(render, state) {
+        if (!Object.keys(state.quotes).length) {
+            Util.renderEmpty(render);
+            return;
+        }
+
+        /* eslint indent: off */
+        render`
+            <div class="h5 overflow-auto">
+
+                <table class="collapse f6 w-100 mw8 center">
+                    <tbody>${
+                        Object.keys(state.quotes).map(instrument => {
+                            const quote = state.quotes[instrument];
+
+                            return hyperHTML.wire(quote, ":tr")`<tr>
+                                <td class="pv1 pr1 bb b--black-20"> ${instrument} </td>
+                                <td class="pv1 pr1 bb b--black-20 tr"> ${quote.bid} </td>
+                                <td class="pv1 pr1 bb b--black-20 tr"> ${quote.ask} </td>
+                                <td class="pv1 pr1 bb b--black-20 tr"> ${quote.spread} </td>
+                            </tr>`;
+                    })}</tbody>
+                </table>
+            </div>
+        `;
+    }
+}
+
+// <td class="pv1 pr1 bb b--black-20">
+//     <sl-chart class="mw3" instrument="instrument" data="quote" length="100"></sl-chart>
+// </td>
+
+class QuotesController {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            quotes: {}
+        }, state => template.update(render, state));
+
+        this.quotesService = new QuotesService(this.state.quotes);
+    }
+}
+
+class QuotesComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("quotes"));
+
+        this.quotesController = new QuotesController(render, QuotesTemplate);
+    }
+}
+
+QuotesComponent.bootstrap();
+
 class ToastsTemplate {
     static update(render, state) {
         if (!state.toasts.length) {
@@ -865,7 +977,6 @@ ToastsComponent.bootstrap();
 // import { orders } from "./orders/orders.module";
 // import { plugins } from "./plugins/plugins.module";
 // import { positions } from "./positions/positions.module";
-// import { quotes } from "./quotes/quotes.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
 // import { trades } from "./trades/trades.module";

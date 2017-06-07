@@ -1,5 +1,6 @@
 import { Util } from "../../util";
 import { ToastsService } from "../toasts/toasts.service";
+import { QuotesService } from "../quotes/quotes.service";
 
 export class StreamingService {
     static startStream(data) {
@@ -46,13 +47,15 @@ export class StreamingService {
                             data.closeoutBid
                     };
 
-                    // this.QuotesService.updateTick(tick);
+                    QuotesService.updateTick(tick);
+
                     // this.TradesService.updateTrades(tick);
                     // this.OrdersService.updateOrders(tick);
                 }
 
                 if (isTransaction) {
                     transaction = data;
+
                     // this.ActivityService.addActivity(transaction);
 
                     // this.TradesService.refresh();
@@ -61,6 +64,7 @@ export class StreamingService {
                 }
 
                 if (refreshPlugins) {
+
                     // this.PluginsService.refresh();
                 }
             } catch (e) {
