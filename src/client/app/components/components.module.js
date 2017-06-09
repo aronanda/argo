@@ -10,7 +10,6 @@
 // import { positions } from "./positions/positions.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
-// import { trades } from "./trades/trades.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
 import "./account/account.module";
@@ -20,3 +19,4 @@ import "./session/session.module";
 import "./streaming/streaming.module";
 import "./toasts/toasts.module";
 import "./token-dialog/token-dialog.module";
+import "./trades/trades.module";

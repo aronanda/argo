@@ -1,48 +1,50 @@
-import { ToastsService } from "../toasts/toasts.service";
+import Introspected from "introspected";
+
+// import { ToastsService } from "../toasts/toasts.service";
+import { TradesService } from "../trades/trades.service";
 
 export class TradesController {
-    constructor(TradesService) {
-        this.TradesService = TradesService;
+    constructor(render, template) {
+
+        this.state = Introspected({
+            trades: []
+        }, state => template.update(render, state));
+
+        this.tradesService = new TradesService(this.state.trades);
+
+        TradesService.refresh();
     }
 
-    $onInit() {
-        this.trades = this.TradesService.getTrades();
+    // closeTrade(tradeId) {
+    //     this.openCloseTradeModal = true;
+    //     this.closingTradeId = tradeId;
+    // }
 
-        this.TradesService.refresh();
-    }
+    // closeTradeDialog(answer) {
+    //     this.openCloseTradeModal = false;
 
-    closeTrade(tradeId) {
-        this.openCloseTradeModal = true;
-        this.closingTradeId = tradeId;
-    }
+    //     if (!answer) {
+    //         return;
+    //     }
 
-    closeTradeDialog(answer) {
-        this.openCloseTradeModal = false;
+    //     this.TradesService.closeTrade(this.closingTradeId).then(trade => {
+    //         let message = "Closed " +
+    //                 `${(trade.units > 0 ? "sell" : "buy")} ` +
+    //                 `${trade.instrument} ` +
+    //                 `#${trade.id} ` +
+    //                 `@${trade.price} ` +
+    //                 `P&L ${trade.pl}`;
 
-        if (!answer) {
-            return;
-        }
-
-        this.TradesService.closeTrade(this.closingTradeId).then(trade => {
-            let message = "Closed " +
-                    `${(trade.units > 0 ? "sell" : "buy")} ` +
-                    `${trade.instrument} ` +
-                    `#${trade.id} ` +
-                    `@${trade.price} ` +
-                    `P&L ${trade.pl}`;
-
-            if (trade.errorMessage || trade.message) {
-                message = `ERROR ${trade.errorMessage || trade.message}`;
-            }
+    //         if (trade.errorMessage || trade.message) {
+    //             message = `ERROR ${trade.errorMessage || trade.message}`;
+    //         }
 
 
-            ToastsService.addToast(message);
-        }).catch(err => {
-            const message = `ERROR ${err.code} ${err.message}`;
+    //         ToastsService.addToast(message);
+    //     }).catch(err => {
+    //         const message = `ERROR ${err.code} ${err.message}`;
 
-            ToastsService.addToast(message);
-        });
-    }
-
+    //         ToastsService.addToast(message);
+    //     });
+    // }
 }
-TradesController.$inject = ["TradesService"];

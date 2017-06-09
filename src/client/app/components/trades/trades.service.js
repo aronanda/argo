@@ -1,51 +1,58 @@
-import angular from "angular";
+import { Util } from "../../util";
+import { SessionService } from "../session/session.service";
+import { AccountsService } from "../account/accounts.service";
 
 export class TradesService {
-    constructor($http, SessionService, AccountsService) {
-        this.$http = $http;
-        this.SessionService = SessionService;
-        this.AccountsService = AccountsService;
-
-        this.trades = [];
+    constructor(trades) {
+        if (!TradesService.trades) {
+            TradesService.trades = trades;
+        }
     }
 
-    getTrades() {
-        return this.trades;
+    static getTrades() {
+        return TradesService.trades;
     }
 
-    refresh() {
-        this.SessionService.isLogged().then(credentials => {
-            this.$http.post("/api/trades", {
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/trades", {
+            method: "post",
+            body: JSON.stringify({
                 environment: credentials.environment,
                 token: credentials.token,
                 accountId: credentials.accountId
-            }).then(res => {
-                this.trades.length = 0;
-                angular.extend(this.trades, res.data);
-                this.trades.forEach(trade => {
-                    trade.side = trade.currentUnits > 0 ? "buy" : "sell";
-                });
+            })
+        }).then(res => res.json()).then(data => {
+            TradesService.trades.length = 0;
+            TradesService.trades.forEach(trade => {
+                TradesService.trades.push(data);
+                trade.side = trade.currentUnits > 0 ? "buy" : "sell";
             });
         });
     }
 
-    closeTrade(id) {
-        return this.SessionService.isLogged().then(
-            credentials => this.$http.post("/api/closetrade", {
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId,
-                id
-            }).then(order => order.data)
-                .catch(err => err.data)
-        );
-    }
+    // closeTrade(id) {
+    //     return this.SessionService.isLogged().then(
+    //         credentials => this.$http.post("/api/closetrade", {
+    //             environment: credentials.environment,
+    //             token: credentials.token,
+    //             accountId: credentials.accountId,
+    //             id
+    //         }).then(order => order.data)
+    //             .catch(err => err.data)
+    //     );
+    // }
 
-    updateTrades(tick) {
-        const account = this.AccountsService.getAccount(),
+    static updateTrades(tick) {
+        const account = AccountsService.getAccount(),
             pips = account.pips;
 
-        this.trades.forEach((trade, index) => {
+        TradesService.trades.forEach((trade, index) => {
             let current,
                 side;
 
@@ -54,18 +61,19 @@ export class TradesService {
 
                 if (side === "buy") {
                     current = tick.bid;
-                    this.trades[index].profitPips =
+                    TradesService.trades[index].profitPips =
                         ((current - trade.price) / pips[trade.instrument]);
                 }
                 if (side === "sell") {
                     current = tick.ask;
-                    this.trades[index].profitPips =
+                    TradesService.trades[index].profitPips =
                         ((trade.price - current) / pips[trade.instrument]);
                 }
 
-                this.trades[index].current = current;
+                TradesService.trades[index].current = current;
             }
         });
     }
 }
-TradesService.$inject = ["$http", "SessionService", "AccountsService"];
+
+TradesService.trades = null;

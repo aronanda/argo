@@ -955,6 +955,205 @@ class ToastsComponent {
 
 ToastsComponent.bootstrap();
 
+class TradesTemplate {
+    static update(render, state) {
+        if (state.trades.length) {
+            TradesTemplate.renderTrades(render, state);
+        } else {
+            TradesTemplate.renderNoTrades(render);
+        }
+    }
+
+    static renderTrades(render, state) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <table class="f6 w-100 mw8 center" cellpsacing="0">
+                    <thead>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Type</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Ticket</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Market</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Units</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">S/L</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">T/P</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">T/S</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Price</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Current</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Profit (PIPS)</th>
+                    </thead>
+
+                    <tbody>
+                        <tr ng-repeat="trade in $ctrl.trades">
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ trade.side }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">
+                                <a href ng-click="$ctrl.closeTrade(trade.id)">{{ trade.id }}</a>
+                            </td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ trade.instrument }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ trade.currentUnits | number }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ trade.stopLossOrder.price }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ trade.takeProfitOrder.price }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ trade.trailingStopLossOrder.distance }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ trade.price }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ trade.current }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr"
+                                ng-class="trade.profitPips >= 0 ? 'green' : 'red'">
+                                {{ trade.profitPips | number:1}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <yesno-dialog open-modal="$ctrl.openCloseTradeModal"
+                close-modal="$ctrl.closeTradeDialog(answer)"
+                text="Are you sure to close the trade?">
+            </yesno-dialog>
+        `;
+    }
+
+    static renderNoTrades(render) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <p ng-hide="$ctrl.trades.length" class="f6 w-100 mw8 tc b">No trades.</p>
+            </div>
+        `;
+    }
+}
+
+class TradesService {
+    constructor(trades) {
+        if (!TradesService.trades) {
+            TradesService.trades = trades;
+        }
+    }
+
+    static getTrades() {
+        return TradesService.trades;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/trades", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId
+            })
+        }).then(res => res.json()).then(data => {
+            TradesService.trades.length = 0;
+            TradesService.trades.forEach(trade => {
+                TradesService.trades.push(data);
+                trade.side = trade.currentUnits > 0 ? "buy" : "sell";
+            });
+        });
+    }
+
+    // closeTrade(id) {
+    //     return this.SessionService.isLogged().then(
+    //         credentials => this.$http.post("/api/closetrade", {
+    //             environment: credentials.environment,
+    //             token: credentials.token,
+    //             accountId: credentials.accountId,
+    //             id
+    //         }).then(order => order.data)
+    //             .catch(err => err.data)
+    //     );
+    // }
+
+    static updateTrades(tick) {
+        const account = AccountsService.getAccount(),
+            pips = account.pips;
+
+        TradesService.trades.forEach((trade, index) => {
+            let current,
+                side;
+
+            if (trade.instrument === tick.instrument) {
+                side = trade.currentUnits > 0 ? "buy" : "sell";
+
+                if (side === "buy") {
+                    current = tick.bid;
+                    TradesService.trades[index].profitPips =
+                        ((current - trade.price) / pips[trade.instrument]);
+                }
+                if (side === "sell") {
+                    current = tick.ask;
+                    TradesService.trades[index].profitPips =
+                        ((trade.price - current) / pips[trade.instrument]);
+                }
+
+                TradesService.trades[index].current = current;
+            }
+        });
+    }
+}
+
+TradesService.trades = null;
+
+// import { ToastsService } from "../toasts/toasts.service";
+class TradesController {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            trades: []
+        }, state => template.update(render, state));
+
+        this.tradesService = new TradesService(this.state.trades);
+
+        TradesService.refresh();
+    }
+
+    // closeTrade(tradeId) {
+    //     this.openCloseTradeModal = true;
+    //     this.closingTradeId = tradeId;
+    // }
+
+    // closeTradeDialog(answer) {
+    //     this.openCloseTradeModal = false;
+
+    //     if (!answer) {
+    //         return;
+    //     }
+
+    //     this.TradesService.closeTrade(this.closingTradeId).then(trade => {
+    //         let message = "Closed " +
+    //                 `${(trade.units > 0 ? "sell" : "buy")} ` +
+    //                 `${trade.instrument} ` +
+    //                 `#${trade.id} ` +
+    //                 `@${trade.price} ` +
+    //                 `P&L ${trade.pl}`;
+
+    //         if (trade.errorMessage || trade.message) {
+    //             message = `ERROR ${trade.errorMessage || trade.message}`;
+    //         }
+
+
+    //         ToastsService.addToast(message);
+    //     }).catch(err => {
+    //         const message = `ERROR ${err.code} ${err.message}`;
+
+    //         ToastsService.addToast(message);
+    //     });
+    // }
+}
+
+class TradesComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("trades"));
+
+        this.tradesController = new TradesController(render, TradesTemplate);
+    }
+}
+
+TradesComponent.bootstrap();
+
 // import { activity } from "./activity/activity.module";
 // import { charts } from "./charts/charts.module";
 // import { exposure } from "./exposure/exposure.module";
@@ -967,7 +1166,6 @@ ToastsComponent.bootstrap();
 // import { positions } from "./positions/positions.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
-// import { trades } from "./trades/trades.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
 }(hyperHTML,Introspected));
