@@ -34,5 +34,3 @@ export class QuotesTemplate {
 // <td class="pv1 pr1 bb b--black-20">
 //     <sl-chart class="mw3" instrument="instrument" data="quote" length="100"></sl-chart>
 // </td>
-
-

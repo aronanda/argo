@@ -1,6 +1,5 @@
 import { AccountsService } from "../account/accounts.service";
 
-
 export class QuotesService {
     constructor(quotes) {
         if (!QuotesService.quotes) {
