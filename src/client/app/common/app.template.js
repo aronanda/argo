@@ -1,4 +1,4 @@
-import hyperHTML from "hyperHTML";
+import { Util } from "../util";
 
 export class AppTemplate {
     static update(render, state) {
@@ -7,20 +7,10 @@ export class AppTemplate {
         const isTradesTab = state.tabSelectedIndex === 0;
         const isOrdersTab = state.tabSelectedIndex === 1;
         const isPositionsTab = state.tabSelectedIndex === 2;
-        const isExposuresTab = state.tabSelectedIndex === 3;
+        const isExposureTab = state.tabSelectedIndex === 3;
         const isActivityTab = state.tabSelectedIndex === 4;
         const isNewsTab = state.tabSelectedIndex === 5;
         const isPluginsTab = state.tabSelectedIndex === 6;
-        const tabs = [
-            hyperHTML.wire(render, ":trades")`<trades></trades>`,
-            hyperHTML.wire(render, ":orders")`<orders></orders>`,
-            hyperHTML.wire(render, ":positions")`<positions></positions>`,
-            hyperHTML.wire(render, ":exposure")`<exposure></exposure>`,
-            hyperHTML.wire(render, ":activity")`<activity></activity>`,
-            hyperHTML.wire(render, ":news")`<news></news>`,
-            hyperHTML.wire(render, ":plugins")`<plugins></plugins>`
-        ];
-        const selectedTab = tabs[state.tabSelectedIndex];
 
         /* eslint indent: off */
         render`
@@ -39,7 +29,7 @@ export class AppTemplate {
                     onclick="${() => {
                         state.tabSelectedIndex = 2;
                     }}">Positions</a>
-                <a class="${isExposuresTab ? selectedTabClasses : tabClasses}"
+                <a class="${isExposureTab ? selectedTabClasses : tabClasses}"
                     onclick="${() => {
                         state.tabSelectedIndex = 3;
                     }}">Exposures</a>
@@ -64,7 +54,15 @@ export class AppTemplate {
                     <toasts></toasts>
                 </div>
                 <div class="flex flex-wrap flex-column min-w-75">
-                    <div class="ma2 pa2">${selectedTab}</div>
+                    <div class="ma2 pa2">
+                        <trades style="${Util.show(isTradesTab)}"></trades>
+                        <orders style="${Util.show(isOrdersTab)}"></orders>
+                        <positions style="${Util.show(isPositionsTab)}"></positions>
+                        <exposure style="${Util.show(isExposureTab)}"></exposure>
+                        <activity style="${Util.show(isActivityTab)}"></activity>
+                        <news style="${Util.show(isNewsTab)}"></news>
+                        <plugins style="${Util.show(isPluginsTab)}"></plugins>
+                    </div>
                     <charts></charts>
                 </div>
             </div>
