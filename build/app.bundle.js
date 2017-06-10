@@ -859,6 +859,220 @@ class HeaderComponent {
 
 HeaderComponent.bootstrap();
 
+class OrdersTemplate {
+    static update(render, state) {
+        if (state.trades.length) {
+            OrdersTemplate.renderOrders(render, state);
+        } else {
+            OrdersTemplate.renderNoOrders(render);
+        }
+    }
+
+    static renderOrders(render, state) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <table class="f6 w-100 mw8 center" cellpsacing="0">
+                    <thead>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Type</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Ticket</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Market</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Units</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">S/L</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">T/P</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">T/S</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Price</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Current</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Distance</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Expiry</th>
+                    </thead>
+
+                    <tbody>
+                        <tr ng-repeat="order in $ctrl.orders">
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.side || order.type }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">
+                                <a href ng-click="$ctrl.closeOrder(order.id)">{{ order.id }}</a>
+                            </td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.instrument }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.units | number }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.stopLossOnFill.price }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.takeProfitOnFill.price }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.trailingStopLossOnFill.distance || order.trailingStopValue }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.price | number:4 }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.current | number:4 }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.distance | number:1 }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ order.expiry | date:"MMM d, HH:mm" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <yesno-dialog open-modal="$ctrl.openCloseOrderModal"
+                close-modal="$ctrl.closeOrderDialog(answer)"
+                text="Are you sure to close the order?">
+            </yesno-dialog>
+
+        `;
+    }
+
+    static renderNoOrders(render) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <p class="f6 w-100 mw8 tc b">No orders.</p>
+            </div>
+        `;
+    }
+}
+
+class OrdersService {
+    constructor(orders) {
+        if (!OrdersService.orders) {
+            OrdersService.orders = orders;
+        }
+    }
+
+
+    static getOrders() {
+        return OrdersService.orders;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/orders", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId
+            })
+        }).then(res => res.json()).then(data => {
+            OrdersService.orders = data;
+        });
+    }
+
+    static putOrder(order) {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/order", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId,
+                instrument: order.instrument,
+                units: order.units,
+                side: order.side,
+                type: order.type,
+                expiry: order.expiry,
+                price: order.price,
+                priceBound: order.lowerBound || order.upperBound,
+                stopLossOnFill: order.stopLossOnFill,
+                takeProfitOnFill: order.takeProfitOnFill,
+                trailingStopLossOnFill: order.trailingStopLossOnFill
+            })
+        }).then(res => res.json()).then(data => data)
+            .catch(err => err.data);
+    }
+
+    // closeOrder(id) {
+    //     return this.SessionService.isLogged().then(
+    //         credentials => this.$http.post("/api/closeorder", {
+    //             environment: credentials.environment,
+    //             token: credentials.token,
+    //             accountId: credentials.accountId,
+    //             id
+    //         }).then(order => order.data)
+    //             .catch(err => err.data)
+    //     );
+    // }
+
+    static updateOrders(tick) {
+        const account = AccountsService.getAccount(),
+            pips = account.pips;
+
+        OrdersService.orders.forEach((order, index) => {
+            let current;
+
+            if (order.instrument === tick.instrument) {
+
+                if (order.units > 0) {
+                    current = tick.ask;
+                }
+                if (order.units < 0) {
+                    current = tick.bid;
+                }
+
+                OrdersService.orders[index].current = current;
+                OrdersService.orders[index].distance = (Math.abs(current - order.price) /
+                    pips[order.instrument]);
+            }
+        });
+    }
+}
+
+OrdersService.orders = null;
+
+// import { ToastsService } from "../toasts/toasts.service";
+class OrdersController {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            orders: []
+        }, state => template.update(render, state));
+
+        this.ordersService = new OrdersService(this.state.orders);
+
+        OrdersService.refresh();
+    }
+
+    // closeOrder(orderId) {
+    //     this.openCloseOrderModal = true;
+    //     this.closingOrderId = orderId;
+    // }
+
+    // closeOrderDialog(answer) {
+    //     this.openCloseOrderModal = false;
+
+    //     if (!answer) {
+    //         return;
+    //     }
+
+    //     this.OrdersService.closeOrder(this.closingOrderId).then(order => {
+    //         let message = `Closed #${order.orderCancelTransaction.orderID}`;
+
+    //         if (order.errorMessage || order.message) {
+    //             message = `ERROR ${order.errorMessage || order.message}`;
+    //         }
+
+    //         ToastsService.addToast(message);
+    //     }).catch(err => {
+    //         const message = `ERROR ${err.code} ${err.message}`;
+
+    //         ToastsService.addToast(message);
+    //     });
+    // }
+}
+
+class OrdersComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("orders"));
+
+        this.ordersController = new OrdersController(render, OrdersTemplate);
+    }
+}
+
+OrdersComponent.bootstrap();
+
 class QuotesTemplate {
     static update(render, state) {
         if (!Object.keys(state.quotes).length) {
@@ -1161,7 +1375,6 @@ TradesComponent.bootstrap();
 // import { news } from "./news/news.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
-// import { orders } from "./orders/orders.module";
 // import { plugins } from "./plugins/plugins.module";
 // import { positions } from "./positions/positions.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";

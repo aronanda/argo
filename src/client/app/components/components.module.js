@@ -5,7 +5,6 @@
 // import { news } from "./news/news.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
-// import { orders } from "./orders/orders.module";
 // import { plugins } from "./plugins/plugins.module";
 // import { positions } from "./positions/positions.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
@@ -14,6 +13,7 @@
 
 import "./account/account.module";
 import "./header/header.module";
+import "./orders/orders.module";
 import "./quotes/quotes.module";
 import "./session/session.module";
 import "./streaming/streaming.module";

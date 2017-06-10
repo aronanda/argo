@@ -1,42 +1,44 @@
-import { ToastsService } from "../toasts/toasts.service";
+import Introspected from "introspected";
+
+// import { ToastsService } from "../toasts/toasts.service";
+import { OrdersService } from "../orders/orders.service";
 
 export class OrdersController {
-    constructor(OrdersService) {
-        this.OrdersService = OrdersService;
+    constructor(render, template) {
+
+        this.state = Introspected({
+            orders: []
+        }, state => template.update(render, state));
+
+        this.ordersService = new OrdersService(this.state.orders);
+
+        OrdersService.refresh();
     }
 
-    $onInit() {
-        this.orders = this.OrdersService.getOrders();
+    // closeOrder(orderId) {
+    //     this.openCloseOrderModal = true;
+    //     this.closingOrderId = orderId;
+    // }
 
-        this.OrdersService.refresh();
-    }
+    // closeOrderDialog(answer) {
+    //     this.openCloseOrderModal = false;
 
-    closeOrder(orderId) {
-        this.openCloseOrderModal = true;
-        this.closingOrderId = orderId;
-    }
+    //     if (!answer) {
+    //         return;
+    //     }
 
-    closeOrderDialog(answer) {
-        this.openCloseOrderModal = false;
+    //     this.OrdersService.closeOrder(this.closingOrderId).then(order => {
+    //         let message = `Closed #${order.orderCancelTransaction.orderID}`;
 
-        if (!answer) {
-            return;
-        }
+    //         if (order.errorMessage || order.message) {
+    //             message = `ERROR ${order.errorMessage || order.message}`;
+    //         }
 
-        this.OrdersService.closeOrder(this.closingOrderId).then(order => {
-            let message = `Closed #${order.orderCancelTransaction.orderID}`;
+    //         ToastsService.addToast(message);
+    //     }).catch(err => {
+    //         const message = `ERROR ${err.code} ${err.message}`;
 
-            if (order.errorMessage || order.message) {
-                message = `ERROR ${order.errorMessage || order.message}`;
-            }
-
-            ToastsService.addToast(message);
-        }).catch(err => {
-            const message = `ERROR ${err.code} ${err.message}`;
-
-            ToastsService.addToast(message);
-        });
-    }
-
+    //         ToastsService.addToast(message);
+    //     });
+    // }
 }
-OrdersController.$inject = ["OrdersService"];
