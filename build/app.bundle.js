@@ -861,7 +861,7 @@ HeaderComponent.bootstrap();
 
 class OrdersTemplate {
     static update(render, state) {
-        if (state.trades.length) {
+        if (state.orders.length) {
             OrdersTemplate.renderOrders(render, state);
         } else {
             OrdersTemplate.renderNoOrders(render);
