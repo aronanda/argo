@@ -632,19 +632,26 @@ class TradesService {
 
 TradesService.trades = null;
 
-class ExposureController {
-    constructor(render, template) {
+class ExposureService {
+    constructor(exposure) {
+        if (!ExposureService.exposure) {
+            ExposureService.exposure = exposure;
+        }
+    }
 
-        this.state = Introspected({
-            exposure: []
-        }, state => template.update(render, state));
+    static getExposure() {
+        return ExposureService.exposure;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
 
         const trades = TradesService.getTrades(),
             exps = {};
-
-        if (!trades) { // create a service with refresh method
-            return;
-        }
 
         trades.forEach(trade => {
             const legs = trade.instrument.split("_");
@@ -659,12 +666,27 @@ class ExposureController {
         Object.keys(exps).forEach(exp => {
             const type = exps[exp] > 0;
 
-            this.state.exposures.push({
+            ExposureService.exposure.push({
                 type: type ? "Long" : "Short",
                 market: exp,
                 units: Math.abs(exps[exp])
             });
         });
+
+    }
+
+}
+
+ExposureService.exposure = null;
+
+class ExposureController {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            exposure: []
+        }, state => template.update(render, state));
+
+        this.exposureService = new ExposureService(this.state.exposure);
     }
 }
 
