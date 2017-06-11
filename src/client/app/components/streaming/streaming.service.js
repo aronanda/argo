@@ -1,6 +1,11 @@
 import { Util } from "../../util";
 import { ToastsService } from "../toasts/toasts.service";
 import { QuotesService } from "../quotes/quotes.service";
+import { TradesService } from "../trades/trades.service";
+import { OrdersService } from "../orders/orders.service";
+import { ActivityService } from "../activity/activity.service";
+import { AccountsService } from "../account/accounts.service";
+import { PluginsService } from "../plugins/plugins.service";
 
 export class StreamingService {
     static startStream(data) {
@@ -49,23 +54,22 @@ export class StreamingService {
 
                     QuotesService.updateTick(tick);
 
-                    // this.TradesService.updateTrades(tick);
-                    // this.OrdersService.updateOrders(tick);
+                    TradesService.updateTrades(tick);
+                    OrdersService.updateOrders(tick);
                 }
 
                 if (isTransaction) {
                     transaction = data;
 
-                    // this.ActivityService.addActivity(transaction);
+                    ActivityService.addActivity(transaction);
 
-                    // this.TradesService.refresh();
-                    // this.OrdersService.refresh();
-                    // this.AccountsService.refresh();
+                    TradesService.refresh();
+                    OrdersService.refresh();
+                    AccountsService.refresh();
                 }
 
                 if (refreshPlugins) {
-
-                    // this.PluginsService.refresh();
+                    PluginsService.refresh();
                 }
             } catch (e) {
 

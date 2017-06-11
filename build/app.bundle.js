@@ -929,6 +929,182 @@ class QuotesService {
 
 QuotesService.quotes = null;
 
+class OrdersService {
+    constructor(orders) {
+        if (!OrdersService.orders) {
+            OrdersService.orders = orders;
+        }
+    }
+
+
+    static getOrders() {
+        return OrdersService.orders;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/orders", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId
+            })
+        }).then(res => res.json()).then(data => {
+            OrdersService.orders = data;
+        });
+    }
+
+    static putOrder(order) {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/order", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId,
+                instrument: order.instrument,
+                units: order.units,
+                side: order.side,
+                type: order.type,
+                expiry: order.expiry,
+                price: order.price,
+                priceBound: order.lowerBound || order.upperBound,
+                stopLossOnFill: order.stopLossOnFill,
+                takeProfitOnFill: order.takeProfitOnFill,
+                trailingStopLossOnFill: order.trailingStopLossOnFill
+            })
+        }).then(res => res.json()).then(data => data)
+            .catch(err => err.data);
+    }
+
+    // closeOrder(id) {
+    //     return this.SessionService.isLogged().then(
+    //         credentials => this.$http.post("/api/closeorder", {
+    //             environment: credentials.environment,
+    //             token: credentials.token,
+    //             accountId: credentials.accountId,
+    //             id
+    //         }).then(order => order.data)
+    //             .catch(err => err.data)
+    //     );
+    // }
+
+    static updateOrders(tick) {
+        const account = AccountsService.getAccount(),
+            pips = account.pips;
+
+        OrdersService.orders.forEach((order, index) => {
+            let current;
+
+            if (order.instrument === tick.instrument) {
+
+                if (order.units > 0) {
+                    current = tick.ask;
+                }
+                if (order.units < 0) {
+                    current = tick.bid;
+                }
+
+                OrdersService.orders[index].current = current;
+                OrdersService.orders[index].distance = (Math.abs(current - order.price) /
+                    pips[order.instrument]);
+            }
+        });
+    }
+}
+
+OrdersService.orders = null;
+
+class PluginsService {
+    constructor(pluginsState) {
+        if (!PluginsService.plugins) {
+            PluginsService.plugins = pluginsState.plugins;
+            PluginsService.pluginsInfo = pluginsState.pluginsInfo;
+        }
+    }
+
+    static getPlugins() {
+        return PluginsService.plugins;
+    }
+
+    static getPluginsInfo() {
+        return PluginsService.pluginsInfo;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/plugins", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId
+            })
+        }).then(res => res.json()).then(data => {
+            let name;
+
+            for (name in PluginsService.plugins) {
+                if (PluginsService.plugins.hasOwnProperty(name)) {
+                    delete PluginsService.plugins[name];
+                }
+            }
+            PluginsService.plugins = data;
+            PluginsService.pluginsInfo.count = Object.keys(
+                PluginsService.plugins).length;
+
+            Object.keys(PluginsService.plugins).forEach(key => {
+                if (PluginsService.plugins[key] === "enabled") {
+                    PluginsService.plugins[key] = true;
+                } else {
+                    PluginsService.plugins[key] = false;
+                }
+            });
+        });
+    }
+
+    static engagePlugins(plugs) {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        const account = AccountsService.getAccount();
+
+        Util.fetch("/api/engageplugins", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId,
+                plugins: plugs,
+                config: {
+                    pips: account.pips
+                }
+            })
+        });
+    }
+}
+
+PluginsService.plugins = null;
+PluginsService.pluginsInfo = null;
+
 class StreamingService {
     static startStream(data) {
         Util.fetch("/api/startstream", {
@@ -976,23 +1152,22 @@ class StreamingService {
 
                     QuotesService.updateTick(tick);
 
-                    // this.TradesService.updateTrades(tick);
-                    // this.OrdersService.updateOrders(tick);
+                    TradesService.updateTrades(tick);
+                    OrdersService.updateOrders(tick);
                 }
 
                 if (isTransaction) {
                     transaction = data;
 
-                    // this.ActivityService.addActivity(transaction);
+                    ActivityService.addActivity(transaction);
 
-                    // this.TradesService.refresh();
-                    // this.OrdersService.refresh();
-                    // this.AccountsService.refresh();
+                    TradesService.refresh();
+                    OrdersService.refresh();
+                    AccountsService.refresh();
                 }
 
                 if (refreshPlugins) {
-
-                    // this.PluginsService.refresh();
+                    PluginsService.refresh();
                 }
             } catch (e) {
 
@@ -1338,103 +1513,6 @@ class OrdersTemplate {
     }
 }
 
-class OrdersService {
-    constructor(orders) {
-        if (!OrdersService.orders) {
-            OrdersService.orders = orders;
-        }
-    }
-
-
-    static getOrders() {
-        return OrdersService.orders;
-    }
-
-    static refresh() {
-        const credentials = SessionService.isLogged();
-
-        if (!credentials) {
-            return;
-        }
-
-        Util.fetch("/api/orders", {
-            method: "post",
-            body: JSON.stringify({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId
-            })
-        }).then(res => res.json()).then(data => {
-            OrdersService.orders = data;
-        });
-    }
-
-    static putOrder(order) {
-        const credentials = SessionService.isLogged();
-
-        if (!credentials) {
-            return;
-        }
-
-        Util.fetch("/api/order", {
-            method: "post",
-            body: JSON.stringify({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId,
-                instrument: order.instrument,
-                units: order.units,
-                side: order.side,
-                type: order.type,
-                expiry: order.expiry,
-                price: order.price,
-                priceBound: order.lowerBound || order.upperBound,
-                stopLossOnFill: order.stopLossOnFill,
-                takeProfitOnFill: order.takeProfitOnFill,
-                trailingStopLossOnFill: order.trailingStopLossOnFill
-            })
-        }).then(res => res.json()).then(data => data)
-            .catch(err => err.data);
-    }
-
-    // closeOrder(id) {
-    //     return this.SessionService.isLogged().then(
-    //         credentials => this.$http.post("/api/closeorder", {
-    //             environment: credentials.environment,
-    //             token: credentials.token,
-    //             accountId: credentials.accountId,
-    //             id
-    //         }).then(order => order.data)
-    //             .catch(err => err.data)
-    //     );
-    // }
-
-    static updateOrders(tick) {
-        const account = AccountsService.getAccount(),
-            pips = account.pips;
-
-        OrdersService.orders.forEach((order, index) => {
-            let current;
-
-            if (order.instrument === tick.instrument) {
-
-                if (order.units > 0) {
-                    current = tick.ask;
-                }
-                if (order.units < 0) {
-                    current = tick.bid;
-                }
-
-                OrdersService.orders[index].current = current;
-                OrdersService.orders[index].distance = (Math.abs(current - order.price) /
-                    pips[order.instrument]);
-            }
-        });
-    }
-}
-
-OrdersService.orders = null;
-
 // import { ToastsService } from "../toasts/toasts.service";
 class OrdersController {
     constructor(render, template) {
@@ -1527,85 +1605,6 @@ class PluginsTemplate {
         `;
     }
 }
-
-class PluginsService {
-    constructor(pluginsState) {
-        if (!PluginsService.plugins) {
-            PluginsService.plugins = pluginsState.plugins;
-            PluginsService.pluginsInfo = pluginsState.pluginsInfo;
-        }
-    }
-
-    static getPlugins() {
-        return PluginsService.plugins;
-    }
-
-    static getPluginsInfo() {
-        return PluginsService.pluginsInfo;
-    }
-
-    static refresh() {
-        const credentials = SessionService.isLogged();
-
-        if (!credentials) {
-            return;
-        }
-
-        Util.fetch("/api/plugins", {
-            method: "post",
-            body: JSON.stringify({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId
-            })
-        }).then(res => res.json()).then(data => {
-            let name;
-
-            for (name in PluginsService.plugins) {
-                if (PluginsService.plugins.hasOwnProperty(name)) {
-                    delete PluginsService.plugins[name];
-                }
-            }
-            PluginsService.plugins = data;
-            PluginsService.pluginsInfo.count = Object.keys(
-                PluginsService.plugins).length;
-
-            Object.keys(PluginsService.plugins).forEach(key => {
-                if (PluginsService.plugins[key] === "enabled") {
-                    PluginsService.plugins[key] = true;
-                } else {
-                    PluginsService.plugins[key] = false;
-                }
-            });
-        });
-    }
-
-    static engagePlugins(plugs) {
-        const credentials = SessionService.isLogged();
-
-        if (!credentials) {
-            return;
-        }
-
-        const account = AccountsService.getAccount();
-
-        Util.fetch("/api/engageplugins", {
-            method: "post",
-            body: JSON.stringify({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId,
-                plugins: plugs,
-                config: {
-                    pips: account.pips
-                }
-            })
-        });
-    }
-}
-
-PluginsService.plugins = null;
-PluginsService.pluginsInfo = null;
 
 class PluginsController {
     constructor(render, template) {
