@@ -1071,6 +1071,118 @@ class OrdersComponent {
 
 OrdersComponent.bootstrap();
 
+class PositionsTemplate {
+    static update(render, state) {
+        if (state.positions.length) {
+            PositionsTemplate.renderPositions(render, state);
+        } else {
+            PositionsTemplate.renderNoPositions(render);
+        }
+    }
+
+    static renderPositions(render, state) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <table class="f6 w-100 mw8 center" cellpsacing="0">
+                    <thead>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Type</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Market</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Units</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Avg. Price</th>
+                    </thead>
+
+                    <tbody>
+                        <tr ng-repeat="position in $ctrl.positions">
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ position.side }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ position.instrument }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ position.units | number }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ position.avgPrice }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    static renderNoPositions(render) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <p class="f6 w-100 mw8 tc b">No positions.</p>
+            </div>
+        `;
+    }
+}
+
+class PositionsService {
+    constructor(positions) {
+        if (!PositionsService.positions) {
+            PositionsService.positions = positions;
+        }
+    }
+
+    static getPositions() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/positions", {
+            methhod: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId
+            })
+        }).then(res => res.json()).then(positions => {
+            PositionsService.positions.length = 0;
+
+            positions.forEach(position => {
+                const longUnits = position.long &&
+                    parseInt(position.long.units, 10);
+                const shortUnits = position.short &&
+                    parseInt(position.short.units, 10);
+                const units = longUnits || shortUnits;
+                const side = units > 0 ? "buy" : "sell";
+                const avgPrice = (longUnits && position.long.averagePrice) ||
+                    (shortUnits && position.short.averagePrice);
+
+                PositionsService.positions.push({
+                    side,
+                    instrument: position.instrument,
+                    units,
+                    avgPrice
+                });
+            });
+        }).catch(err => err.data);
+    }
+}
+
+PositionsService.positions = null;
+
+class PositionsController {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            positions: []
+        }, state => template.update(render, state));
+
+        this.positionsService = new PositionsService(this.state.orders);
+    }
+}
+
+class PositionsComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("positions"));
+
+        this.positionsController = new PositionsController(render, PositionsTemplate);
+    }
+}
+
+PositionsComponent.bootstrap();
+
 class QuotesTemplate {
     static update(render, state) {
         if (!Object.keys(state.quotes).length) {
@@ -1374,7 +1486,6 @@ TradesComponent.bootstrap();
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
 // import { plugins } from "./plugins/plugins.module";
-// import { positions } from "./positions/positions.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
