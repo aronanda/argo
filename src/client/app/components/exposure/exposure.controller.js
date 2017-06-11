@@ -1,13 +1,20 @@
+import Introspected from "introspected";
+
+import { TradesService } from "../trades/trades.service";
+
 export class ExposureController {
-    constructor(TradesService) {
-        this.TradesService = TradesService;
-    }
+    constructor(render, template) {
 
-    $onInit() {
-        this.exposures = [];
+        this.state = Introspected({
+            exposure: []
+        }, state => template.update(render, state));
 
-        const trades = this.TradesService.getTrades(),
+        const trades = TradesService.getTrades(),
             exps = {};
+
+        if (!trades) { // create a service with refresh method
+            return;
+        }
 
         trades.forEach(trade => {
             const legs = trade.instrument.split("_");
@@ -22,7 +29,7 @@ export class ExposureController {
         Object.keys(exps).forEach(exp => {
             const type = exps[exp] > 0;
 
-            this.exposures.push({
+            this.state.exposures.push({
                 type: type ? "Long" : "Short",
                 market: exp,
                 units: Math.abs(exps[exp])
@@ -30,4 +37,3 @@ export class ExposureController {
         });
     }
 }
-ExposureController.$inject = ["TradesService"];

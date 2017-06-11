@@ -388,6 +388,170 @@ class AccountComponent {
 
 AccountComponent.bootstrap();
 
+class ExposureTemplate {
+    static update(render, state) {
+        if (state.exposure.length) {
+            ExposureTemplate.renderExposure(render, state);
+        } else {
+            ExposureTemplate.renderNoExposure(render);
+        }
+    }
+
+    static renderExposure(render, state) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <table class="f6 w-100 mw8 center" cellpsacing="0">
+                    <thead>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Type</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Market</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Units</th>
+                    </thead>
+
+                    <tbody>
+                        <tr ng-repeat="exposure in $ctrl.exposures">
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.type }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.market }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.units | number:0 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    static renderNoExposure(render) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <p class="f6 w-100 mw8 tc b">No exposures.</p>
+            </div>
+        `;
+    }
+}
+
+class TradesService {
+    constructor(trades) {
+        if (!TradesService.trades) {
+            TradesService.trades = trades;
+        }
+    }
+
+    static getTrades() {
+        return TradesService.trades;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/trades", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId
+            })
+        }).then(res => res.json()).then(data => {
+            TradesService.trades.length = 0;
+            TradesService.trades.forEach(trade => {
+                TradesService.trades.push(data);
+                trade.side = trade.currentUnits > 0 ? "buy" : "sell";
+            });
+        });
+    }
+
+    // closeTrade(id) {
+    //     return this.SessionService.isLogged().then(
+    //         credentials => this.$http.post("/api/closetrade", {
+    //             environment: credentials.environment,
+    //             token: credentials.token,
+    //             accountId: credentials.accountId,
+    //             id
+    //         }).then(order => order.data)
+    //             .catch(err => err.data)
+    //     );
+    // }
+
+    static updateTrades(tick) {
+        const account = AccountsService.getAccount(),
+            pips = account.pips;
+
+        TradesService.trades.forEach((trade, index) => {
+            let current,
+                side;
+
+            if (trade.instrument === tick.instrument) {
+                side = trade.currentUnits > 0 ? "buy" : "sell";
+
+                if (side === "buy") {
+                    current = tick.bid;
+                    TradesService.trades[index].profitPips =
+                        ((current - trade.price) / pips[trade.instrument]);
+                }
+                if (side === "sell") {
+                    current = tick.ask;
+                    TradesService.trades[index].profitPips =
+                        ((trade.price - current) / pips[trade.instrument]);
+                }
+
+                TradesService.trades[index].current = current;
+            }
+        });
+    }
+}
+
+TradesService.trades = null;
+
+class ExposureController {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            exposure: []
+        }, state => template.update(render, state));
+
+        const trades = TradesService.getTrades(),
+            exps = {};
+
+        if (!trades) {
+            return;
+        }
+
+        trades.forEach(trade => {
+            const legs = trade.instrument.split("_");
+
+            exps[legs[0]] = exps[legs[0]] || 0;
+            exps[legs[1]] = exps[legs[1]] || 0;
+
+            exps[legs[0]] += parseInt(trade.currentUnits, 10);
+            exps[legs[1]] -= trade.currentUnits * trade.price;
+        });
+
+        Object.keys(exps).forEach(exp => {
+            const type = exps[exp] > 0;
+
+            this.state.exposures.push({
+                type: type ? "Long" : "Short",
+                market: exp,
+                units: Math.abs(exps[exp])
+            });
+        });
+    }
+}
+
+class ExposureComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("exposure"));
+
+        this.exposureController = new ExposureController(render, ExposureTemplate);
+    }
+}
+
+ExposureComponent.bootstrap();
+
 class HeaderTemplate {
     static update(render, state) {
         /* eslint indent: off */
@@ -1345,82 +1509,6 @@ class TradesTemplate {
     }
 }
 
-class TradesService {
-    constructor(trades) {
-        if (!TradesService.trades) {
-            TradesService.trades = trades;
-        }
-    }
-
-    static getTrades() {
-        return TradesService.trades;
-    }
-
-    static refresh() {
-        const credentials = SessionService.isLogged();
-
-        if (!credentials) {
-            return;
-        }
-
-        Util.fetch("/api/trades", {
-            method: "post",
-            body: JSON.stringify({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId
-            })
-        }).then(res => res.json()).then(data => {
-            TradesService.trades.length = 0;
-            TradesService.trades.forEach(trade => {
-                TradesService.trades.push(data);
-                trade.side = trade.currentUnits > 0 ? "buy" : "sell";
-            });
-        });
-    }
-
-    // closeTrade(id) {
-    //     return this.SessionService.isLogged().then(
-    //         credentials => this.$http.post("/api/closetrade", {
-    //             environment: credentials.environment,
-    //             token: credentials.token,
-    //             accountId: credentials.accountId,
-    //             id
-    //         }).then(order => order.data)
-    //             .catch(err => err.data)
-    //     );
-    // }
-
-    static updateTrades(tick) {
-        const account = AccountsService.getAccount(),
-            pips = account.pips;
-
-        TradesService.trades.forEach((trade, index) => {
-            let current,
-                side;
-
-            if (trade.instrument === tick.instrument) {
-                side = trade.currentUnits > 0 ? "buy" : "sell";
-
-                if (side === "buy") {
-                    current = tick.bid;
-                    TradesService.trades[index].profitPips =
-                        ((current - trade.price) / pips[trade.instrument]);
-                }
-                if (side === "sell") {
-                    current = tick.ask;
-                    TradesService.trades[index].profitPips =
-                        ((trade.price - current) / pips[trade.instrument]);
-                }
-
-                TradesService.trades[index].current = current;
-            }
-        });
-    }
-}
-
-TradesService.trades = null;
-
 // import { ToastsService } from "../toasts/toasts.service";
 class TradesController {
     constructor(render, template) {
@@ -1480,7 +1568,6 @@ TradesComponent.bootstrap();
 
 // import { activity } from "./activity/activity.module";
 // import { charts } from "./charts/charts.module";
-// import { exposure } from "./exposure/exposure.module";
 // import { highlighter } from "./highlighter/highlighter.module";
 // import { news } from "./news/news.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";

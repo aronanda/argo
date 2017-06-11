@@ -1,6 +1,5 @@
 // import { activity } from "./activity/activity.module";
 // import { charts } from "./charts/charts.module";
-// import { exposure } from "./exposure/exposure.module";
 // import { highlighter } from "./highlighter/highlighter.module";
 // import { news } from "./news/news.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
@@ -11,6 +10,7 @@
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
 import "./account/account.module";
+import "./exposure/exposure.module";
 import "./header/header.module";
 import "./orders/orders.module";
 import "./positions/positions.module";
