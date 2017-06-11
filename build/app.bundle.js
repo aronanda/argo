@@ -1464,6 +1464,158 @@ class OrdersComponent {
 
 OrdersComponent.bootstrap();
 
+class PluginsTemplate {
+    static update(render, state) {
+        if (state.plugins.length) {
+            PluginsTemplate.renderPlugins(render, state);
+        } else {
+            PluginsTemplate.renderNoPlugins(render);
+        }
+    }
+
+    static renderPlugins(render, state) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <table class="f6 w-100 mw8 center" cellpsacing="0">
+                    <thead>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Enabled</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white">Plugin</th>
+                    </thead>
+
+                    <tbody>
+                        <tr ng-repeat="(plugin, value) in $ctrl.plugins">
+                            <td class="pv1 pr1 bb b--black-20 tr">
+                                <input type="checkbox" ng-model="$ctrl.plugins[plugin]" ng-change="$ctrl.engage()">
+                            </td>
+                            <td class="pv1 pr1 bb b--black-20">{{ plugin }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    static renderNoPlugins(render) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <p class="f6 w-100 mw8 tc b">No plugins.</p>
+            </div>
+        `;
+    }
+}
+
+class PluginsService {
+    constructor(pluginsState) {
+        if (!PluginsService.plugins) {
+            PluginsService.plugins = pluginsState.plugins;
+            PluginsService.pluginsInfo = pluginsState.pluginsInfo;
+        }
+    }
+
+    static getPlugins() {
+        return PluginsService.plugins;
+    }
+
+    static getPluginsInfo() {
+        return PluginsService.pluginsInfo;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/plugins", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId
+            })
+        }).then(res => res.json()).then(data => {
+            let name;
+
+            for (name in PluginsService.plugins) {
+                if (PluginsService.plugins.hasOwnProperty(name)) {
+                    delete PluginsService.plugins[name];
+                }
+            }
+            PluginsService.plugins = data;
+            PluginsService.pluginsInfo.count = Object.keys(
+                PluginsService.plugins).length;
+
+            Object.keys(PluginsService.plugins).forEach(key => {
+                if (PluginsService.plugins[key] === "enabled") {
+                    PluginsService.plugins[key] = true;
+                } else {
+                    PluginsService.plugins[key] = false;
+                }
+            });
+        });
+    }
+
+    static engagePlugins(plugs) {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        const account = AccountsService.getAccount();
+
+        Util.fetch("/api/engageplugins", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId,
+                plugins: plugs,
+                config: {
+                    pips: account.pips
+                }
+            })
+        });
+    }
+}
+
+PluginsService.plugins = null;
+PluginsService.pluginsInfo = null;
+
+class PluginsController {
+    constructor(render, template) {
+
+        this.state = Introspected({
+            plugins: [],
+            pluginsInfo: {
+                count: 0
+            }
+        }, state => template.update(render, state));
+
+        this.pluginService = new PluginsService(this.state);
+
+        PluginsService.refresh();
+    }
+
+    engage() {
+        PluginsService.engagePlugins(this.state.plugins);
+    }
+}
+PluginsController.$inject = ["PluginsService"];
+
+class PluginsComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("plugins"));
+
+        this.pluginsController = new PluginsController(render, PluginsTemplate);
+    }
+}
+
+PluginsComponent.bootstrap();
+
 class PositionsTemplate {
     static update(render, state) {
         if (state.positions.length) {
@@ -1799,7 +1951,6 @@ TradesComponent.bootstrap();
 // import { highlighter } from "./highlighter/highlighter.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
-// import { plugins } from "./plugins/plugins.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";

@@ -1,17 +1,24 @@
+import Introspected from "introspected";
+
+import { PluginsService } from "../plugins/plugins.service";
+
 export class PluginsController {
-    constructor(PluginsService) {
-        this.PluginsService = PluginsService;
-    }
+    constructor(render, template) {
 
-    $onInit() {
-        this.plugins = this.PluginsService.getPlugins();
-        this.pluginsInfo = this.PluginsService.getPluginsInfo();
+        this.state = Introspected({
+            plugins: [],
+            pluginsInfo: {
+                count: 0
+            }
+        }, state => template.update(render, state));
 
-        this.PluginsService.refresh();
+        this.pluginService = new PluginsService(this.state);
+
+        PluginsService.refresh();
     }
 
     engage() {
-        this.PluginsService.engagePlugins(this.plugins);
+        PluginsService.engagePlugins(this.state.plugins);
     }
 }
 PluginsController.$inject = ["PluginsService"];
