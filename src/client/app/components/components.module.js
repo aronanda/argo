@@ -1,6 +1,5 @@
 // import { charts } from "./charts/charts.module";
 // import { highlighter } from "./highlighter/highlighter.module";
-// import { news } from "./news/news.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
 // import { plugins } from "./plugins/plugins.module";
@@ -12,6 +11,7 @@ import "./account/account.module";
 import "./activity/activity.module";
 import "./exposure/exposure.module";
 import "./header/header.module";
+import "./news/news.module";
 import "./orders/orders.module";
 import "./positions/positions.module";
 import "./quotes/quotes.module";
