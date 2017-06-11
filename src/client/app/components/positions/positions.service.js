@@ -8,7 +8,7 @@ export class PositionsService {
         }
     }
 
-    static getPositions() {
+    static refresh() {
         const credentials = SessionService.isLogged();
 
         if (!credentials) {
