@@ -1,4 +1,3 @@
-// import { activity } from "./activity/activity.module";
 // import { charts } from "./charts/charts.module";
 // import { highlighter } from "./highlighter/highlighter.module";
 // import { news } from "./news/news.module";
@@ -10,6 +9,7 @@
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
 import "./account/account.module";
+import "./activity/activity.module";
 import "./exposure/exposure.module";
 import "./header/header.module";
 import "./orders/orders.module";
