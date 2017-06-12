@@ -1,5 +1,4 @@
 // import { charts } from "./charts/charts.module";
-// import { highlighter } from "./highlighter/highlighter.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";

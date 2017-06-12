@@ -1797,16 +1797,52 @@ class QuotesTemplate {
 
                             return hyperHTML.wire(quote, ":tr")`<tr>
                                 <td class="pv1 pr1 bb b--black-20"> ${instrument} </td>
-                                <td class="pv1 pr1 bb b--black-20 tr"> ${quote.bid} </td>
-                                <td class="pv1 pr1 bb b--black-20 tr"> ${quote.ask} </td>
-                                <td class="pv1 pr1 bb b--black-20 tr"> ${quote.spread} </td>
+                                <td class="${QuotesTemplate.highlighter(quote.bid, instrument, "bid")}"> ${quote.bid} </td>
+                                <td class="${QuotesTemplate.highlighter(quote.ask, instrument, "ask")}"> ${quote.ask} </td>
+                                <td class="${QuotesTemplate.highlighter(quote.spread, instrument, "spread")}"> ${quote.spread} </td>
                             </tr>`;
                     })}</tbody>
                 </table>
-            </div>
+           </div>
         `;
     }
+
+    static highlighter(value, instrument, type) {
+        const classes = "pv1 pr1 bb b--black-20 tr";
+        const quoteClasses = `${instrument}-${type} ${classes}`;
+        const greenClass = "highlight-green";
+        const redClass = "highlight-red";
+
+        if (!QuotesTemplate.cache[instrument]) {
+            QuotesTemplate.cache[instrument] = {};
+        }
+
+        if (!QuotesTemplate.cache[instrument][type]) {
+            QuotesTemplate.cache[instrument][type] = {};
+        }
+
+        const cache = QuotesTemplate.cache[instrument][type];
+        const oldValue = cache.value;
+
+        const highlight = value >= oldValue
+            ? `${quoteClasses} ${greenClass}`
+            : `${quoteClasses} ${redClass}`;
+
+        cache.value = value;
+
+        clearTimeout(cache.timeout);
+        cache.timeout = setTimeout(() => {
+            const el = document.querySelector(`.${instrument}-${type}`);
+
+            el.classList.remove(greenClass);
+            el.classList.remove(redClass);
+        }, 500);
+
+        return highlight;
+    }
 }
+
+QuotesTemplate.cache = {};
 
 // <td class="pv1 pr1 bb b--black-20">
 //     <sl-chart class="mw3" instrument="instrument" data="quote" length="100"></sl-chart>
@@ -1999,7 +2035,6 @@ class TradesComponent {
 TradesComponent.bootstrap();
 
 // import { charts } from "./charts/charts.module";
-// import { highlighter } from "./highlighter/highlighter.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
 // import { settingsDialog } from "./settings-dialog/settings-dialog.module";
