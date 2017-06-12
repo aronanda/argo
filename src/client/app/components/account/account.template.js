@@ -10,7 +10,7 @@ export class AccountTemplate {
     }
 
     static renderAccount(render, state) {
-        const timestamp = Util.getHHMMSSfromDate(new Date(state.account.timestamp));
+        const timestamp = Util.formatDate(new Date(state.account.timestamp));
         const balance = parseFloat(state.account.balance).toFixed(2);
         const unrealizedPL = parseFloat(state.account.unrealizedPL).toFixed(2);
         const unrealizedPLPercent = parseFloat(state.account.unrealizedPLPercent).toFixed(2);
