@@ -1,3 +1,5 @@
+import hyperHTML from "hyperHTML";
+
 import { Util } from "../../util";
 
 export class ActivityTemplate {
@@ -13,9 +15,7 @@ export class ActivityTemplate {
         /* eslint indent: off */
         render`
             <div class="h4 overflow-auto">
-                <p ng-hide="$ctrl.activities.length" class="f6 w-100 mw8 tc b">No activities.</p>
-
-                <table ng-show="$ctrl.activities.length" class="f6 w-100 mw8 center" cellpsacing="0">
+                <table class="f6 w-100 mw8 center" cellpsacing="0">
                     <thead>
                         <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Ticket</th>
                         <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Type</th>
@@ -27,21 +27,23 @@ export class ActivityTemplate {
                         <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Date/Time</th>
                     </thead>
 
-                    <tbody>
-                        <tr ng-repeat="activity in $ctrl.activities">
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.id }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.type }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.instrument }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.units | number }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.price }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr"
-                                ng-class="activity.pl >= 0 ? 'highlight-green' : 'highlight-red'">
-                                {{ activity.pl | number:4 }}
-                            </td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.accountBalance | number:2 }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.time | date:"MMM d, HH:mm:ss" }}</td>
-                        </tr>
-                    </tbody>
+                    <tbody>${
+                        state.activities.map(activity => {
+                            const classes = "pv1 pr1 bb b--black-20 tr";
+                            const highlight = classes +
+                                (activity.pl >= 0 ? " highlight-green" : " highlight-red");
+
+                            return hyperHTML.wire(activity, ":tr")`<tr>
+                                <td class="${classes}"> ${activity.id} </td>
+                                <td class="${classes}"> ${activity.type} </td>
+                                <td class="${classes}"> ${activity.instrument} </td>
+                                <td class="${classes}"> ${Util.formatNumber(activity.units)} </td>
+                                <td class="${classes}"> ${activity.price} </td>
+                                <td class="${highlight}"> ${Util.formatNumber(activity.pl, 4)} </td>
+                                <td class="${classes}"> ${Util.formatNumber(activity.accountBalance, 2)} </td>
+                                <td class="${classes}"> ${Util.formatDate(activity.time)} </td>
+                            </tr>`;
+                    })}</tbody>
                 </table>
             </div>
         `;
