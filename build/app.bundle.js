@@ -37,6 +37,33 @@ class Util {
         return `${hours}:${minutes}:${seconds}`;
     }
 
+    static formatDate(date) {
+        if (!date) {
+            return "";
+        }
+
+        if (typeof date === "string") {
+            date = new Date(date);
+        }
+
+        return date.toLocaleString("en-US", {
+            month: "short",
+            day: "2-digit",
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+        });
+    }
+
+    static formatNumber(num, decimals = 0) {
+        if (!num.toString()) {
+            return "";
+        }
+
+        return parseFloat(num).toFixed(decimals);
+    }
+
     static fetch(url, options) {
         options.headers = options.headers ||
             { "Content-Type": "application/json" };
@@ -177,7 +204,7 @@ class AccountTemplate {
     }
 
     static renderAccount(render, state) {
-        const timestamp = Util.getHHMMSSfromDate(new Date(state.account.timestamp));
+        const timestamp = Util.formatDate(new Date(state.account.timestamp));
         const balance = parseFloat(state.account.balance).toFixed(2);
         const unrealizedPL = parseFloat(state.account.unrealizedPL).toFixed(2);
         const unrealizedPLPercent = parseFloat(state.account.unrealizedPLPercent).toFixed(2);
@@ -401,9 +428,7 @@ class ActivityTemplate {
         /* eslint indent: off */
         render`
             <div class="h4 overflow-auto">
-                <p ng-hide="$ctrl.activities.length" class="f6 w-100 mw8 tc b">No activities.</p>
-
-                <table ng-show="$ctrl.activities.length" class="f6 w-100 mw8 center" cellpsacing="0">
+                <table class="f6 w-100 mw8 center" cellpsacing="0">
                     <thead>
                         <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Ticket</th>
                         <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Type</th>
@@ -415,21 +440,23 @@ class ActivityTemplate {
                         <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Date/Time</th>
                     </thead>
 
-                    <tbody>
-                        <tr ng-repeat="activity in $ctrl.activities">
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.id }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.type }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.instrument }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.units | number }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.price }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr"
-                                ng-class="activity.pl >= 0 ? 'highlight-green' : 'highlight-red'">
-                                {{ activity.pl | number:4 }}
-                            </td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.accountBalance | number:2 }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ activity.time | date:"MMM d, HH:mm:ss" }}</td>
-                        </tr>
-                    </tbody>
+                    <tbody>${
+                        state.activities.map(activity => {
+                            const classes = "pv1 pr1 bb b--black-20 tr";
+                            const highlight = classes +
+                                (activity.pl >= 0 ? " highlight-green" : " highlight-red");
+
+                            return hyperHTML.wire(activity, ":tr")`<tr>
+                                <td class="${classes}"> ${activity.id} </td>
+                                <td class="${classes}"> ${activity.type} </td>
+                                <td class="${classes}"> ${activity.instrument} </td>
+                                <td class="${classes}"> ${Util.formatNumber(activity.units)} </td>
+                                <td class="${classes}"> ${activity.price} </td>
+                                <td class="${highlight}"> ${Util.formatNumber(activity.pl, 4)} </td>
+                                <td class="${classes}"> ${Util.formatNumber(activity.accountBalance, 2)} </td>
+                                <td class="${classes}"> ${Util.formatDate(activity.time)} </td>
+                            </tr>`;
+                    })}</tbody>
                 </table>
             </div>
         `;
@@ -452,7 +479,7 @@ class ActivityService {
         }
     }
 
-    static getActivities() {
+    static refresh() {
         const credentials = SessionService.isLogged();
 
         if (!credentials) {
@@ -471,9 +498,10 @@ class ActivityService {
                 lastTransactionID
             })
         }).then(res => res.json()).then(data => {
-            ActivityService.activities = data.reverse();
-
-            return this.activities;
+            ActivityService.activities.length = 0;
+            data.reverse().forEach(activity => {
+                ActivityService.activities.push(activity);
+            });
         }).catch(err => err.data);
     }
 
@@ -1230,6 +1258,8 @@ class TokenDialogController {
                 accountId: tokenInfo.accountId,
                 instruments
             });
+
+            ActivityService.refresh();
 
             this.state.tokenModalIsOpen = false;
         }).catch(err => {
