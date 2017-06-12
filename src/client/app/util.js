@@ -33,6 +33,33 @@ export class Util {
         return `${hours}:${minutes}:${seconds}`;
     }
 
+    static formatDate(date) {
+        if (!date) {
+            return "";
+        }
+
+        if (typeof date === "string") {
+            date = new Date(date);
+        }
+
+        return date.toLocaleString("en-US", {
+            month: "short",
+            day: "2-digit",
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+        });
+    }
+
+    static formatNumber(num, decimals = 0) {
+        if (!num.toString()) {
+            return "";
+        }
+
+        return parseFloat(num).toFixed(decimals);
+    }
+
     static fetch(url, options) {
         options.headers = options.headers ||
             { "Content-Type": "application/json" };
