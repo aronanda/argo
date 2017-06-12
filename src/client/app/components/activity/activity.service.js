@@ -9,7 +9,7 @@ export class ActivityService {
         }
     }
 
-    static getActivities() {
+    static refresh() {
         const credentials = SessionService.isLogged();
 
         if (!credentials) {
@@ -28,9 +28,10 @@ export class ActivityService {
                 lastTransactionID
             })
         }).then(res => res.json()).then(data => {
-            ActivityService.activities = data.reverse();
-
-            return this.activities;
+            ActivityService.activities.length = 0;
+            data.reverse().forEach(activity => {
+                ActivityService.activities.push(activity);
+            });
         }).catch(err => err.data);
     }
 
