@@ -1,13 +1,9 @@
 import Introspected from "introspected";
 
-import { Util } from "../../util";
+import { AccountsService } from "../account/accounts.service";
+import { SettingsDialogComponent } from "../settings-dialog/settings-dialog.component";
 import { TokenDialogComponent } from "../token-dialog/token-dialog.component";
-
-// import { AccountsService } from "../account/accounts.service";
-// import { SessionService } from "../session/session.service";
-// import { QuotesService } from "../quotes/quotes.service";
-// import { StreamingService } from "../streaming/streaming.service";
-// import { ToastsService } from "../toasts/toasts.service";
+import { Util } from "../../util";
 
 export class HeaderController {
     constructor(render, template) {
@@ -38,6 +34,7 @@ export class HeaderController {
                 token: "",
                 accountId: ""
             },
+            settingsModalIsOpen: false,
             accounts: [],
             instrs
         }, state => template.update(render, state, events));
@@ -45,46 +42,18 @@ export class HeaderController {
         Util.spinnerState = this.state.spinner;
 
         TokenDialogComponent.bootstrap(this.state);
+        SettingsDialogComponent.bootstrap(this.state);
     }
 
-    // openSettingsDialog() {
-    //     this.SessionService.isLogged().then(credentials => {
-    //         const allInstrs = this.AccountsService.getAccount().instruments;
+    onOpenSettingsClick() {
+        const allInstrs = AccountsService.getAccount().instruments;
 
-    //         angular.forEach(allInstrs, instrument => {
-    //             if (!this.instrs.hasOwnProperty(instrument.name)) {
-    //                 this.instrs[instrument.name] = false;
-    //             }
-    //         });
+        allInstrs.forEach(instrument => {
+            if (!this.state.instrs[instrument.name].toString()) {
+                this.state.instrs[instrument.name] = false;
+            }
+        });
 
-    //         this.credentials = credentials;
-    //         this.openSettingsModal = true;
-    //     }).catch(err => {
-    //         if (err) {
-    //             ToastsService.addToast(err);
-    //         }
-    //     });
-    // }
-
-    // closeSettingsDialog(settingsInfo) {
-    //     let instruments;
-
-    //     this.openSettingsModal = false;
-
-    //     if (settingsInfo) {
-    //         this.$window.localStorage.setItem("argo.instruments",
-    //             angular.toJson(settingsInfo));
-    //         instruments = this.AccountsService
-    //             .setStreamingInstruments(settingsInfo);
-
-    //         this.QuotesService.reset();
-
-    //         this.StreamingService.startStream({
-    //             environment: this.credentials.environment,
-    //             accessToken: this.credentials.token,
-    //             accountId: this.credentials.accountId,
-    //             instruments
-    //         });
-    //     }
-    // }
+        this.state.settingsModalIsOpen = true;
+    }
 }
