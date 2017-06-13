@@ -729,7 +729,7 @@ class ExposureComponent {
 ExposureComponent.bootstrap();
 
 class HeaderTemplate {
-    static update(render, state) {
+    static update(render, state, events) {
         /* eslint indent: off */
         render`
             <nav class="flex flex-row bt bb tc mw9 center shadow-2">
@@ -753,16 +753,16 @@ class HeaderTemplate {
                             Please, insert the access token.
                         </div>
 
-                        <a class="pointer f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4"
+                        <a id="openSettings" class="pointer f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4"
                             style="${Util.show(state.tokenInfo.accountId)}"
-                            ng-click="$ctrl.openSettingsDialog()">
-                        <span class="pl1">Settings</span>
+                            onclick="${events}">
+                                Settings
                         </a>
                         <a class="pointer f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4"
                             onclick="${() => {
                                 state.tokenModalIsOpen = true;
                             }}">
-                        <span class="pl1">Token</span>
+                                Token
                         </a>
                 </div>
 
@@ -773,77 +773,58 @@ class HeaderTemplate {
             </nav>
 
             <token-dialog></token-dialog>
-            <settings-dialog open-modal="$ctrl.openSettingsModal"
-                close-modal="$ctrl.closeSettingsDialog(settingsInfo)" instruments="$ctrl.instrs">
-            </settings-dialog>
+            <settings-dialog></settings-dialog>
         `;
     }
 }
 
-class TokenDialogTemplate {
+class SettingsDialogTemplate {
     static update(render, state, events) {
-        if (!state.tokenModalIsOpen) {
+        if (!state.settingsModalIsOpen) {
             Util.renderEmpty(render);
             return;
         }
 
-        if (!state.accounts.length) {
-            TokenDialogTemplate.renderTokenModal(render, state, events);
-        } else {
-            TokenDialogTemplate.renderAccountsListModal(render, state, events);
-        }
+        SettingsDialogTemplate.renderSettingsModal(render, state, events);
     }
 
-    static renderTokenModal(render, state, events) {
+    static renderSettingsModal(render, state, events) {
         /* eslint indent: off */
         render`
             <div class="fixed absolute--fill bg-black-70 z5">
             <div class="fixed absolute-center z999">
 
-            <main class="pa4 black-80 bg-white">
+            <main class="pa4 black-80 bg-white h5 overflow-y-auto">
                 <form class="measure center">
                     <fieldset id="login" class="ba b--transparent ph0 mh0">
-                        <legend class="f4 fw6 ph0 mh0 center">Token Dialog</legend>
+                        <legend class="f4 fw6 ph0 mh0 center">Settings Dialog</legend>${
+                            Object.keys(state.instrs).map(instrument => {
+                                const value = !!state.instrs[instrument];
 
-                        <div class="flex flex-row items-center mb2 justify-between">
-                            <label for="practice" class="lh-copy">Practice</label>
-                            <input class="mr2" type="radio" name="environment" value="practice"
-                                checked="${state.tokenInfo.environment === "practice"}"
-                                onchange="${e => {
-                                    state.tokenInfo.environment = e.target.value.trim();
-                                }}">
-
-                        </div>
-                        <div class="flex flex-row items-center justify-between mb2">
-                            <label for="live" class="lh-copy">Live</label>
-                            <input class="mr2" type="radio" name="environment" value="live"
-                                checked="${state.tokenInfo.environment === "live"}"
-                                onchange="${e => {
-                                    state.tokenInfo.environment = e.target.value.trim();
-                                }}">
-                        </div>
-
-                        <div class="mv3">
-                            <input class="b pa2 ba bg-transparent w-100"
-                                placeholder="Token" name="token" id="token"
-                                oninput="${e => {
-                                    state.tokenInfo.token = e.target.value.trim();
-                                }}">
-                        </div>
-                    </fieldset>
-
-                    <div class="flex flex-row items-center justify-around">
-                        <input id="loginCancel" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
-                            type="button" value="Cancel"
-                            onclick="${() => {
-                                state.tokenModalIsOpen = false;
-                            }}">
-
-                        <input id="loginOk" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
-                            type="button" value="Ok"
-                            onclick="${events}">
-                    </div>
+                                return hyperHTML.wire()`<span class="flex flex-row justify-center justify-around code">
+                                        <input id="toggleInstrumentSettings" type="checkbox"
+                                            onchange="${e => {
+                                                state.instrs[instrument] = e.target.checked;
+                                            }}"
+                                            checked="${value}"> ${instrument}
+                                        </input>
+                                    </span>
+                                `;
+                            })
+                    }</fieldset>
                 </form>
+
+                <div class="flex flex-row justify-center justify-around">
+                    <input class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                        type="submit" value="Cancel"
+                        onclick="${() => {
+                            state.settingsModalIsOpen = false;
+                        }}">
+
+                    <input id="settingsOk" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                        type="submit" value="Ok"
+                        onclick="${events}">
+                </div>
             </main>
 
             </div>
@@ -851,68 +832,7 @@ class TokenDialogTemplate {
         `;
     }
 
-    static renderAccountsListModal(render, state, events) {
-        /* eslint indent: off */
-        render`
-            <div class="fixed absolute--fill bg-black-70 z5">
-            <div class="fixed absolute-center z999">
-
-            <main class="pa4 black-80 bg-white">
-                <form class="measure center">
-                    <fieldset id="login" class="ba b--transparent ph0 mh0">
-                        <legend class="f4 fw6 ph0 mh0 center">Accounts List</legend>
-                    </fieldset>
-
-                    <div class="flex flex-row items-center justify-around">${
-                        state.accounts.map((account, index) => hyperHTML.wire(account, ":li")`
-                            <input id="${`selectAccount-${index}`}"
-                                class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
-                                type="button" value="${account.id}"
-                                onclick="${e => events(e, index)}">
-                    `)}</div>
-                </form>
-            </main>
-
-            </div>
-            </div>
-        `;
-    }
 }
-
-class ToastsService {
-    constructor(toasts) {
-        if (!ToastsService.toasts) {
-            ToastsService.toasts = toasts;
-        }
-    }
-
-    static getToasts() {
-        return ToastsService.toasts;
-    }
-
-    static addToast(message) {
-        ToastsService.toasts.splice(0, 0, {
-            date: (new Date()),
-            message
-        });
-
-        if (ToastsService.timeout) {
-            clearTimeout(ToastsService.timeout);
-        }
-        ToastsService.timeout = ToastsService.reset();
-    }
-
-    static reset() {
-        return setTimeout(() => {
-            while (ToastsService.toasts.length) {
-                ToastsService.toasts.pop();
-            }
-        }, 10000);
-    }
-}
-
-ToastsService.toasts = null;
-ToastsService.timeout = null;
 
 class QuotesService {
     constructor(quotes) {
@@ -956,6 +876,41 @@ class QuotesService {
 }
 
 QuotesService.quotes = null;
+
+class ToastsService {
+    constructor(toasts) {
+        if (!ToastsService.toasts) {
+            ToastsService.toasts = toasts;
+        }
+    }
+
+    static getToasts() {
+        return ToastsService.toasts;
+    }
+
+    static addToast(message) {
+        ToastsService.toasts.splice(0, 0, {
+            date: (new Date()),
+            message
+        });
+
+        if (ToastsService.timeout) {
+            clearTimeout(ToastsService.timeout);
+        }
+        ToastsService.timeout = ToastsService.reset();
+    }
+
+    static reset() {
+        return setTimeout(() => {
+            while (ToastsService.toasts.length) {
+                ToastsService.toasts.pop();
+            }
+        }, 10000);
+    }
+}
+
+ToastsService.toasts = null;
+ToastsService.timeout = null;
 
 class OrdersService {
     constructor(orders) {
@@ -1206,6 +1161,145 @@ class StreamingService {
     }
 }
 
+class SettingsDialogController {
+    constructor(render, template, bindings) {
+        const events = (e, payload) => Util.handleEvent(this, e, payload);
+
+        this.state = Introspected.observe(bindings,
+            state => template.update(render, state, events));
+    }
+
+    onSettingsOkClick() {
+        const credentials = SessionService.isLogged();
+
+        this.state.settingsModalIsOpen = false;
+
+        if (!credentials) {
+            return;
+        }
+
+        window.localStorage.setItem("argo.instruments", JSON.stringify(this.state.instrs));
+
+        const instruments = AccountsService.setStreamingInstruments(this.state.instrs);
+
+        // QuotesService.reset();
+
+        StreamingService.startStream({
+            environment: credentials.environment,
+            accessToken: credentials.token,
+            accountId: credentials.accountId,
+            instruments
+        });
+    }
+}
+
+class SettingsDialogComponent {
+    static bootstrap(state) {
+        const render = hyperHTML.bind(Util.query("settings-dialog"));
+
+        this.settingsDialogController = new SettingsDialogController(render, SettingsDialogTemplate, state);
+    }
+}
+
+class TokenDialogTemplate {
+    static update(render, state, events) {
+        if (!state.tokenModalIsOpen) {
+            Util.renderEmpty(render);
+            return;
+        }
+
+        if (!state.accounts.length) {
+            TokenDialogTemplate.renderTokenModal(render, state, events);
+        } else {
+            TokenDialogTemplate.renderAccountsListModal(render, state, events);
+        }
+    }
+
+    static renderTokenModal(render, state, events) {
+        /* eslint indent: off */
+        render`
+            <div class="fixed absolute--fill bg-black-70 z5">
+            <div class="fixed absolute-center z999">
+
+            <main class="pa4 black-80 bg-white">
+                <form class="measure center">
+                    <fieldset id="login" class="ba b--transparent ph0 mh0">
+                        <legend class="f4 fw6 ph0 mh0 center">Token Dialog</legend>
+
+                        <div class="flex flex-row items-center mb2 justify-between">
+                            <label for="practice" class="lh-copy">Practice</label>
+                            <input class="mr2" type="radio" name="environment" value="practice"
+                                checked="${state.tokenInfo.environment === "practice"}"
+                                onchange="${e => {
+                                    state.tokenInfo.environment = e.target.value.trim();
+                                }}">
+
+                        </div>
+                        <div class="flex flex-row items-center justify-between mb2">
+                            <label for="live" class="lh-copy">Live</label>
+                            <input class="mr2" type="radio" name="environment" value="live"
+                                checked="${state.tokenInfo.environment === "live"}"
+                                onchange="${e => {
+                                    state.tokenInfo.environment = e.target.value.trim();
+                                }}">
+                        </div>
+
+                        <div class="mv3">
+                            <input class="b pa2 ba bg-transparent w-100"
+                                placeholder="Token" name="token" id="token"
+                                oninput="${e => {
+                                    state.tokenInfo.token = e.target.value.trim();
+                                }}">
+                        </div>
+                    </fieldset>
+
+                    <div class="flex flex-row items-center justify-around">
+                        <input id="loginCancel" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                            type="button" value="Cancel"
+                            onclick="${() => {
+                                state.tokenModalIsOpen = false;
+                            }}">
+
+                        <input id="loginOk" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                            type="button" value="Ok"
+                            onclick="${events}">
+                    </div>
+                </form>
+            </main>
+
+            </div>
+            </div>
+        `;
+    }
+
+    static renderAccountsListModal(render, state, events) {
+        /* eslint indent: off */
+        render`
+            <div class="fixed absolute--fill bg-black-70 z5">
+            <div class="fixed absolute-center z999">
+
+            <main class="pa4 black-80 bg-white">
+                <form class="measure center">
+                    <fieldset id="login" class="ba b--transparent ph0 mh0">
+                        <legend class="f4 fw6 ph0 mh0 center">Accounts List</legend>
+                    </fieldset>
+
+                    <div class="flex flex-row items-center justify-around">${
+                        state.accounts.map((account, index) => hyperHTML.wire(account, ":li")`
+                            <input id="${`selectAccount-${index}`}"
+                                class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                                type="button" value="${account.id}"
+                                onclick="${e => events(e, index)}">
+                    `)}</div>
+                </form>
+            </main>
+
+            </div>
+            </div>
+        `;
+    }
+}
+
 class TokenDialogController {
     constructor(render, template, bindings) {
         const events = (e, payload) => Util.handleEvent(this, e, payload);
@@ -1278,12 +1372,6 @@ class TokenDialogComponent {
     }
 }
 
-// import { AccountsService } from "../account/accounts.service";
-// import { SessionService } from "../session/session.service";
-// import { QuotesService } from "../quotes/quotes.service";
-// import { StreamingService } from "../streaming/streaming.service";
-// import { ToastsService } from "../toasts/toasts.service";
-
 class HeaderController {
     constructor(render, template) {
         const events = (e, payload) => Util.handleEvent(this, e, payload);
@@ -1313,6 +1401,7 @@ class HeaderController {
                 token: "",
                 accountId: ""
             },
+            settingsModalIsOpen: false,
             accounts: [],
             instrs
         }, state => template.update(render, state, events));
@@ -1320,48 +1409,20 @@ class HeaderController {
         Util.spinnerState = this.state.spinner;
 
         TokenDialogComponent.bootstrap(this.state);
+        SettingsDialogComponent.bootstrap(this.state);
     }
 
-    // openSettingsDialog() {
-    //     this.SessionService.isLogged().then(credentials => {
-    //         const allInstrs = this.AccountsService.getAccount().instruments;
+    onOpenSettingsClick() {
+        const allInstrs = AccountsService.getAccount().instruments;
 
-    //         angular.forEach(allInstrs, instrument => {
-    //             if (!this.instrs.hasOwnProperty(instrument.name)) {
-    //                 this.instrs[instrument.name] = false;
-    //             }
-    //         });
+        allInstrs.forEach(instrument => {
+            if (!this.state.instrs[instrument.name].toString()) {
+                this.state.instrs[instrument.name] = false;
+            }
+        });
 
-    //         this.credentials = credentials;
-    //         this.openSettingsModal = true;
-    //     }).catch(err => {
-    //         if (err) {
-    //             ToastsService.addToast(err);
-    //         }
-    //     });
-    // }
-
-    // closeSettingsDialog(settingsInfo) {
-    //     let instruments;
-
-    //     this.openSettingsModal = false;
-
-    //     if (settingsInfo) {
-    //         this.$window.localStorage.setItem("argo.instruments",
-    //             angular.toJson(settingsInfo));
-    //         instruments = this.AccountsService
-    //             .setStreamingInstruments(settingsInfo);
-
-    //         this.QuotesService.reset();
-
-    //         this.StreamingService.startStream({
-    //             environment: this.credentials.environment,
-    //             accessToken: this.credentials.token,
-    //             accountId: this.credentials.accountId,
-    //             instruments
-    //         });
-    //     }
-    // }
+        this.state.settingsModalIsOpen = true;
+    }
 }
 
 class HeaderComponent {
@@ -2037,7 +2098,6 @@ TradesComponent.bootstrap();
 // import { charts } from "./charts/charts.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
-// import { settingsDialog } from "./settings-dialog/settings-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
