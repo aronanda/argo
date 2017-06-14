@@ -1,84 +1,75 @@
-import angular from "angular";
+import Introspected from "introspected";
 
-import { ToastsService } from "../toasts/toasts.service";
+import { AccountsService } from "../account/accounts.service";
+import { ChartsService } from "./charts.service";
+import { QuotesService } from "../quotes/quotes.service";
+import { TradesService } from "../trades/trades.service";
+import { Util } from "../../util";
 
 export class ChartsController {
-    constructor(AccountsService, ChartsService,
-        QuotesService, TradesService) {
+    constructor(render, template) {
+        const events = (e, payload) => Util.handleEvent(this, e, payload);
 
-        this.AccountsService = AccountsService;
-        this.ChartsService = ChartsService;
-        this.QuotesService = QuotesService;
-        this.TradesService = TradesService;
-    }
+        this.state = Introspected({
+            candles: [],
+            account: AccountsService.getAccount(),
+            selectedGranularity: "M5",
+            selectedInstrument: "EUR_USD",
+            granularities: [
+                "S5",
+                "S10",
+                "S15",
+                "S30",
+                "M1",
+                "M2",
+                "M3",
+                "M4",
+                "M5",
+                "M10",
+                "M15",
+                "M30",
+                "H1",
+                "H2",
+                "H3",
+                "H4",
+                "H6",
+                "H8",
+                "H12",
+                "D",
+                "W",
+                "M"
+            ]
+        }, state => template.update(render, state, events));
 
-    $onInit() {
-        this.account = this.AccountsService.getAccount();
+        this.chartsService = new ChartsService(this.state.candles);
 
-        this.selectedInstrument = "EUR_USD";
+        this.feed = QuotesService.getQuotes();
 
-        this.granularities = [
-            "S5",
-            "S10",
-            "S15",
-            "S30",
-            "M1",
-            "M2",
-            "M3",
-            "M4",
-            "M5",
-            "M10",
-            "M15",
-            "M30",
-            "H1",
-            "H2",
-            "H3",
-            "H4",
-            "H6",
-            "H8",
-            "H12",
-            "D",
-            "W",
-            "M"
-        ];
-        this.selectedGranularity = "M5";
+        this.trades = TradesService.getTrades();
 
-        this.feed = this.QuotesService.getQuotes();
-
-        this.trades = this.TradesService.getTrades();
-
-        this.changeChart(this.selectedInstrument, this.selectedGranularity);
+        ChartsController.changeChart(this.state.selectedInstrument, this.state.selectedGranularity);
 
         this.orderParams = {
             side: "buy",
-            selectedInstrument: this.selectedInstrument,
-            instruments: this.account.streamingInstruments
+            selectedInstrument: this.state.selectedInstrument,
+            instruments: this.state.account.streamingInstruments
         };
     }
 
-    changeChart(instrument, granularity) {
-        this.ChartsService.getHistQuotes({
+    static changeChart(instrument, granularity) {
+        ChartsService.getHistQuotes({
             instrument,
             granularity
-        }).then(candles => {
-            this.data = candles;
-        }).catch(err => {
-            ToastsService.addToast(err);
         });
     }
 
-
     openOrderDialog(side) {
-        angular.extend(this.orderParams, {
+        Object.assign(this.orderParams, {
             side,
-            selectedInstrument: this.selectedInstrument,
-            instruments: this.account.streamingInstruments
+            selectedInstrument: this.state.selectedInstrument,
+            instruments: this.state.account.streamingInstruments
         });
 
         this.openOrderModal = true;
     }
 }
-ChartsController.$inject = [
-    "AccountsService", "ChartsService",
-    "QuotesService", "TradesService"
-];
