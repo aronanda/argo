@@ -1,4 +1,3 @@
-// import { charts } from "./charts/charts.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
@@ -6,6 +5,7 @@
 
 import "./account/account.module";
 import "./activity/activity.module";
+import "./charts/charts.module";
 import "./exposure/exposure.module";
 import "./header/header.module";
 import "./news/news.module";
