@@ -1,8 +1,8 @@
 (function (hyperHTML,Introspected) {
 'use strict';
 
-hyperHTML = 'default' in hyperHTML ? hyperHTML['default'] : hyperHTML;
-Introspected = 'default' in Introspected ? Introspected['default'] : Introspected;
+hyperHTML = hyperHTML && 'default' in hyperHTML ? hyperHTML['default'] : hyperHTML;
+Introspected = Introspected && 'default' in Introspected ? Introspected['default'] : Introspected;
 
 class Util {
     static query(selector) {
@@ -542,47 +542,179 @@ class ActivityComponent {
 
 ActivityComponent.bootstrap();
 
-class ExposureTemplate {
-    static update(render, state) {
-        if (state.exposure.length) {
-            ExposureTemplate.renderExposure(render, state);
-        } else {
-            ExposureTemplate.renderNoExposure(render);
+class ChartsTemplate {
+    static update(render, state, events) {
+        if (!Object.keys(state.account.streamingInstruments).length) {
+            Util.renderEmpty(render);
+            return;
         }
-    }
 
-    static renderExposure(render, state) {
         /* eslint indent: off */
         render`
-            <div class="h4 overflow-auto">
-                <table class="f6 w-100 mw8 center" cellpsacing="0">
-                    <thead>
-                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Type</th>
-                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Market</th>
-                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Units</th>
-                    </thead>
+            <div class="flex flex-wrap flex-row justify-center justify-around mb2">
+                <select id="changeInstrument" onchange="${e => events(e, {
+                        selectedInstrument: state.selectedInstrument,
+                        selectedGranularity: state.selectedGranularity
+                    })}">${
 
-                    <tbody>
-                        <tr ng-repeat="exposure in $ctrl.exposures">
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.type }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.market }}</td>
-                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.units | number:0 }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
+                    state.account.streamingInstruments.map(instrument => hyperHTML.wire()`
+                    <option value="${instrument}" selected="${state.selectedItem === instrument}">
+                        ${instrument}
+                    </option>
+                `)}</select>
 
-    static renderNoExposure(render) {
-        /* eslint indent: off */
-        render`
-            <div class="h4 overflow-auto">
-                <p class="f6 w-100 mw8 tc b">No exposures.</p>
+                <select id="changeGranularity" onchange="${e => events(e, {
+                        selectedInstrument: state.selectedInstrument,
+                        selectedGranularity: state.selectedGranularity
+                    })}">${
+
+                    state.granularities.map(granularity => hyperHTML.wire()`
+                    <option value="${granularity}" selected="${state.selectedGranularity === granularity}">
+                        ${granularity}
+                    </option>
+                `)}</select>
+
+                <a class="f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4">
+                    <span id="openBuyOrderDialog" class="pointer pl1"
+                        onclick="${e => events(e, "buy")}">Buy</span>
+                </a>
+                <a class="f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4">
+                    <span id="openSellOrderDialog" class="pointer pl1"
+                        onclick="${e => events(e, "sell")}">Sell</span>
+                </a>
             </div>
+
+            <ohlc-chart class="dn-s"
+                instrument="$ctrl.selectedInstrument"
+                granularity="$ctrl.selectedGranularity"
+                data="$ctrl.data"
+                feed="$ctrl.feed",
+                trades="$ctrl.trades">
+            </ohlc-chart>
+
+            <order-dialog ng-if="$ctrl.openOrderModal" open-modal="$ctrl.openOrderModal"
+                params="$ctrl.orderParams">
+            </order-dialog>
         `;
     }
 }
+
+class ToastsService {
+    constructor(toasts) {
+        if (!ToastsService.toasts) {
+            ToastsService.toasts = toasts;
+        }
+    }
+
+    static getToasts() {
+        return ToastsService.toasts;
+    }
+
+    static addToast(message) {
+        ToastsService.toasts.splice(0, 0, {
+            date: (new Date()),
+            message
+        });
+
+        if (ToastsService.timeout) {
+            clearTimeout(ToastsService.timeout);
+        }
+        ToastsService.timeout = ToastsService.reset();
+    }
+
+    static reset() {
+        return setTimeout(() => {
+            while (ToastsService.toasts.length) {
+                ToastsService.toasts.pop();
+            }
+        }, 10000);
+    }
+}
+
+ToastsService.toasts = null;
+ToastsService.timeout = null;
+
+class ChartsService {
+    constructor(candles) {
+        if (!ChartsService.candles) {
+            ChartsService.candles = candles;
+        }
+    }
+
+    static getHistQuotes({
+        instrument = "EUR_USD",
+        granularity = "M5",
+        count = 251,
+        dailyAlignment = "0"
+    } = {}) {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/candles", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                instrument,
+                granularity,
+                count,
+                dailyAlignment
+            })
+        }).then(res => res.text()).then(data => {
+            ChartsService.candles = data;
+        }).catch(err => {
+            ToastsService.addToast(err.data);
+        });
+    }
+}
+
+ChartsService.candles = null;
+
+class QuotesService {
+    constructor(quotes) {
+        if (!QuotesService.quotes) {
+            QuotesService.quotes = quotes;
+        }
+    }
+
+    static getQuotes() {
+        return QuotesService.quotes;
+    }
+
+    static updateTick(tick) {
+        const account = AccountsService.getAccount(),
+            streamingInstruments = account.streamingInstruments,
+            pips = account.pips,
+            instrument = tick.instrument,
+            lenStreamingInstruments = Object.keys(streamingInstruments).length,
+            lenQuotesInstruments = Object.keys(QuotesService.quotes).length;
+
+        if (lenStreamingInstruments !== lenQuotesInstruments) {
+            streamingInstruments.forEach(instr => {
+                QuotesService.quotes[instr].instrument = instr;
+            });
+        }
+
+        QuotesService.quotes[instrument].time = tick.time;
+        QuotesService.quotes[instrument].ask = tick.ask;
+        QuotesService.quotes[instrument].bid = tick.bid;
+        QuotesService.quotes[instrument].spread =
+            ((tick.ask - tick.bid) / pips[instrument]).toFixed(1);
+    }
+
+    static reset() {
+        for (const instr in QuotesService.quotes) {
+            if (QuotesService.quotes[instr].instrument === instr) {
+                delete QuotesService.quotes[instr];
+            }
+        }
+    }
+}
+
+QuotesService.quotes = null;
 
 class TradesService {
     constructor(trades) {
@@ -659,6 +791,124 @@ class TradesService {
 }
 
 TradesService.trades = null;
+
+class ChartsController {
+    constructor(render, template) {
+        const events = (e, payload) => Util.handleEvent(this, e, payload);
+
+        this.state = Introspected({
+            candles: [],
+            account: AccountsService.getAccount(),
+            selectedGranularity: "M5",
+            selectedInstrument: "EUR_USD",
+            granularities: [
+                "S5",
+                "S10",
+                "S15",
+                "S30",
+                "M1",
+                "M2",
+                "M3",
+                "M4",
+                "M5",
+                "M10",
+                "M15",
+                "M30",
+                "H1",
+                "H2",
+                "H3",
+                "H4",
+                "H6",
+                "H8",
+                "H12",
+                "D",
+                "W",
+                "M"
+            ]
+        }, state => template.update(render, state, events));
+
+        this.chartsService = new ChartsService(this.state.candles);
+
+        this.feed = QuotesService.getQuotes();
+
+        this.trades = TradesService.getTrades();
+
+        ChartsController.changeChart(this.state.selectedInstrument, this.state.selectedGranularity);
+
+        this.orderParams = {
+            side: "buy",
+            selectedInstrument: this.state.selectedInstrument,
+            instruments: this.state.account.streamingInstruments
+        };
+    }
+
+    static changeChart(instrument, granularity) {
+        ChartsService.getHistQuotes({
+            instrument,
+            granularity
+        });
+    }
+
+    openOrderDialog(side) {
+        Object.assign(this.orderParams, {
+            side,
+            selectedInstrument: this.state.selectedInstrument,
+            instruments: this.state.account.streamingInstruments
+        });
+
+        this.openOrderModal = true;
+    }
+}
+
+class ChartsComponent {
+    static bootstrap() {
+        const render = hyperHTML.bind(Util.query("charts"));
+
+        this.chartsController = new ChartsController(render, ChartsTemplate);
+    }
+}
+
+class ExposureTemplate {
+    static update(render, state) {
+        if (state.exposure.length) {
+            ExposureTemplate.renderExposure(render, state);
+        } else {
+            ExposureTemplate.renderNoExposure(render);
+        }
+    }
+
+    static renderExposure(render, state) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <table class="f6 w-100 mw8 center" cellpsacing="0">
+                    <thead>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Type</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Market</th>
+                        <th class="fw6 bb b--black-20 tl pb1 pr1 bg-white tr">Units</th>
+                    </thead>
+
+                    <tbody>
+                        <tr ng-repeat="exposure in $ctrl.exposures">
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.type }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.market }}</td>
+                            <td class="pv1 pr1 bb b--black-20 tr">{{ exposure.units | number:0 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    static renderNoExposure(render) {
+        /* eslint indent: off */
+        render`
+            <div class="h4 overflow-auto">
+                <p class="f6 w-100 mw8 tc b">No exposures.</p>
+            </div>
+        `;
+    }
+}
 
 class ExposureService {
     constructor(exposure) {
@@ -833,84 +1083,6 @@ class SettingsDialogTemplate {
     }
 
 }
-
-class QuotesService {
-    constructor(quotes) {
-        if (!QuotesService.quotes) {
-            QuotesService.quotes = quotes;
-        }
-    }
-
-    static getQuotes() {
-        return QuotesService.quotes;
-    }
-
-    static updateTick(tick) {
-        const account = AccountsService.getAccount(),
-            streamingInstruments = account.streamingInstruments,
-            pips = account.pips,
-            instrument = tick.instrument,
-            lenStreamingInstruments = Object.keys(streamingInstruments).length,
-            lenQuotesInstruments = Object.keys(QuotesService.quotes).length;
-
-        if (lenStreamingInstruments !== lenQuotesInstruments) {
-            streamingInstruments.forEach(instr => {
-                QuotesService.quotes[instr].instrument = instr;
-            });
-        }
-
-        QuotesService.quotes[instrument].time = tick.time;
-        QuotesService.quotes[instrument].ask = tick.ask;
-        QuotesService.quotes[instrument].bid = tick.bid;
-        QuotesService.quotes[instrument].spread =
-            ((tick.ask - tick.bid) / pips[instrument]).toFixed(1);
-    }
-
-    static reset() {
-        for (const instr in QuotesService.quotes) {
-            if (QuotesService.quotes[instr].instrument === instr) {
-                delete QuotesService.quotes[instr];
-            }
-        }
-    }
-}
-
-QuotesService.quotes = null;
-
-class ToastsService {
-    constructor(toasts) {
-        if (!ToastsService.toasts) {
-            ToastsService.toasts = toasts;
-        }
-    }
-
-    static getToasts() {
-        return ToastsService.toasts;
-    }
-
-    static addToast(message) {
-        ToastsService.toasts.splice(0, 0, {
-            date: (new Date()),
-            message
-        });
-
-        if (ToastsService.timeout) {
-            clearTimeout(ToastsService.timeout);
-        }
-        ToastsService.timeout = ToastsService.reset();
-    }
-
-    static reset() {
-        return setTimeout(() => {
-            while (ToastsService.toasts.length) {
-                ToastsService.toasts.pop();
-            }
-        }, 10000);
-    }
-}
-
-ToastsService.toasts = null;
-ToastsService.timeout = null;
 
 class OrdersService {
     constructor(orders) {
@@ -1354,6 +1526,8 @@ class TokenDialogController {
             });
 
             ActivityService.refresh();
+
+            ChartsComponent.bootstrap();
 
             this.state.tokenModalIsOpen = false;
         }).catch(err => {
@@ -2095,7 +2269,6 @@ class TradesComponent {
 
 TradesComponent.bootstrap();
 
-// import { charts } from "./charts/charts.module";
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
 // import { slChart } from "./sl-chart/sl-chart.module";
