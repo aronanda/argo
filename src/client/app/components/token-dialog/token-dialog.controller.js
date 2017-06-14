@@ -1,12 +1,12 @@
 import Introspected from "introspected";
 
-import { Util } from "../../util";
-
-import { ToastsService } from "../toasts/toasts.service";
-import { StreamingService } from "../streaming/streaming.service";
-import { SessionService } from "../session/session.service";
 import { AccountsService } from "../account/accounts.service";
 import { ActivityService } from "../activity/activity.service";
+import { ChartsComponent } from "../charts/charts.component";
+import { SessionService } from "../session/session.service";
+import { StreamingService } from "../streaming/streaming.service";
+import { ToastsService } from "../toasts/toasts.service";
+import { Util } from "../../util";
 
 
 export class TokenDialogController {
@@ -63,6 +63,8 @@ export class TokenDialogController {
             });
 
             ActivityService.refresh();
+
+            ChartsComponent.bootstrap();
 
             this.state.tokenModalIsOpen = false;
         }).catch(err => {
