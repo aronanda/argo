@@ -1,4 +1,4 @@
-(function (hyperHTML,Introspected) {
+(function (hyperHTML,Introspected,d3) {
 'use strict';
 
 hyperHTML = hyperHTML && 'default' in hyperHTML ? hyperHTML['default'] : hyperHTML;
@@ -89,6 +89,20 @@ class Util {
 }
 
 Util.spinnerState = {};
+
+class Hyper extends HTMLElement {
+    connectedCallback() {
+        if ("hyper" in this) {
+            return;
+        }
+        this.hyper = hyperHTML.wire();
+        this.appendChild(this.render());
+    }
+
+    render() {
+        return this.hyper`render method is not implemented`;
+    }
+}
 
 class RootTemplate {
     static update(render) {
@@ -2032,6 +2046,9 @@ class QuotesTemplate {
 
                             return hyperHTML.wire(quote, ":tr")`<tr>
                                 <td class="pv1 pr1 bb b--black-20"> ${instrument} </td>
+                                <td class="pv1 pr1 bb b--black-20">
+                                    <sl-chart class="mw3" data-instrument="${instrument}" data-quote="${JSON.stringify(quote)}" length="100"></sl-chart>
+                                </td>
                                 <td class="${QuotesTemplate.highlighter(quote.bid, instrument, "bid")}"> ${quote.bid} </td>
                                 <td class="${QuotesTemplate.highlighter(quote.ask, instrument, "ask")}"> ${quote.ask} </td>
                                 <td class="${QuotesTemplate.highlighter(quote.spread, instrument, "spread")}"> ${quote.spread} </td>
@@ -2079,10 +2096,6 @@ class QuotesTemplate {
 
 QuotesTemplate.cache = {};
 
-// <td class="pv1 pr1 bb b--black-20">
-//     <sl-chart class="mw3" instrument="instrument" data="quote" length="100"></sl-chart>
-// </td>
-
 class QuotesController {
     constructor(render, template) {
 
@@ -2103,6 +2116,91 @@ class QuotesComponent {
 }
 
 QuotesComponent.bootstrap();
+
+// Inspired by http://bl.ocks.org/vicapow/9904319
+class SlChartTemplate {
+
+    static update(render) {
+        /* eslint indent: off */
+        return render`${hyperHTML.wire(render, "svg")`
+            <svg class="sl"></svg>`
+        }`;
+    }
+
+    static redraw(state) {
+
+        const instrument = state.instrument,
+            quote = state.quotes[instrument],
+            svg = d3.select(`[instrument="${instrument}"] > svg`),
+            node = svg.node(),
+            w = node.clientWidth,
+            h = getComputedStyle(node)["font-size"].replace("px", "");
+
+        svg.selectAll("*").remove();
+
+        if (!SlChartTemplate.data[instrument]) {
+            SlChartTemplate.data[instrument] = [];
+        }
+
+        SlChartTemplate.data[instrument].push(
+            (parseFloat(quote.bid) +
+                parseFloat(quote.ask)) / 2);
+
+        SlChartTemplate.data[instrument] =
+            SlChartTemplate.data[instrument].slice(-state.length);
+
+        if (SlChartTemplate.data[instrument][0] >
+                SlChartTemplate.data[instrument].slice(-1)) {
+            node.style.stroke = "red";
+        } else {
+            node.style.stroke = "green";
+        }
+        node.style.height = `${h}px`;
+
+        const min$$1 = d3.min(SlChartTemplate.data[instrument]);
+        const max$$1 = d3.max(SlChartTemplate.data[instrument]);
+
+        const x = d3.scaleLinear()
+            .domain([0, SlChartTemplate.data[instrument].length - 1])
+            .range([0, w]);
+        const y = d3.scaleLinear()
+            .domain([+min$$1, +max$$1]).range([h, 0]);
+
+        const paths = SlChartTemplate.data[instrument]
+            .map((d, i) => [x(i), y(d)])
+            .join("L");
+
+        svg.append("path").attr("d", `M${paths}`);
+    }
+}
+
+SlChartTemplate.data = {};
+
+class SlChartElement extends Hyper {
+    static get observedAttributes() {
+        return ["data-quote"];
+    }
+
+    constructor() {
+        super();
+
+        this.state = {
+            instrument: this.dataset.instrument,
+            quotes: QuotesService.getQuotes(),
+            length: 100
+        };
+    }
+
+    render() {
+        return SlChartTemplate.update(this.hyper);
+    }
+
+    attributeChangedCallback() {
+        SlChartTemplate.redraw(this.state);
+    }
+
+}
+customElements.define("sl-chart", SlChartElement);
 
 class ToastsTemplate {
     static update(render, state) {
@@ -2271,7 +2369,6 @@ TradesComponent.bootstrap();
 
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
 // import { orderDialog } from "./order-dialog/order-dialog.module";
-// import { slChart } from "./sl-chart/sl-chart.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
-}(hyperHTML,Introspected));
+}(hyperHTML,Introspected,d3));

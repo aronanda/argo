@@ -85,3 +85,17 @@ export class Util {
 }
 
 Util.spinnerState = {};
+
+export class Hyper extends HTMLElement {
+    connectedCallback() {
+        if ("hyper" in this) {
+            return;
+        }
+        this.hyper = hyperHTML.wire();
+        this.appendChild(this.render());
+    }
+
+    render() {
+        return this.hyper`render method is not implemented`;
+    }
+}

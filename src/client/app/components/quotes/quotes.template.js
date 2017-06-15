@@ -20,6 +20,9 @@ export class QuotesTemplate {
 
                             return hyperHTML.wire(quote, ":tr")`<tr>
                                 <td class="pv1 pr1 bb b--black-20"> ${instrument} </td>
+                                <td class="pv1 pr1 bb b--black-20">
+                                    <sl-chart class="mw3" data-instrument="${instrument}" data-quote="${JSON.stringify(quote)}" length="100"></sl-chart>
+                                </td>
                                 <td class="${QuotesTemplate.highlighter(quote.bid, instrument, "bid")}"> ${quote.bid} </td>
                                 <td class="${QuotesTemplate.highlighter(quote.ask, instrument, "ask")}"> ${quote.ask} </td>
                                 <td class="${QuotesTemplate.highlighter(quote.spread, instrument, "spread")}"> ${quote.spread} </td>
@@ -66,7 +69,3 @@ export class QuotesTemplate {
 }
 
 QuotesTemplate.cache = {};
-
-// <td class="pv1 pr1 bb b--black-20">
-//     <sl-chart class="mw3" instrument="instrument" data="quote" length="100"></sl-chart>
-// </td>
