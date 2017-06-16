@@ -2047,7 +2047,7 @@ class QuotesTemplate {
                             return hyperHTML.wire(quote, ":tr")`<tr>
                                 <td class="pv1 pr1 bb b--black-20"> ${instrument} </td>
                                 <td class="pv1 pr1 bb b--black-20">
-                                    <sl-chart class="mw3" data-instrument="${instrument}" data-quote="${JSON.stringify(quote)}" length="100"></sl-chart>
+                                    <sl-chart data-instrument="${instrument}" data-quote="${JSON.stringify(quote)}" length="100"></sl-chart>
                                 </td>
                                 <td class="${QuotesTemplate.highlighter(quote.bid, instrument, "bid")}"> ${quote.bid} </td>
                                 <td class="${QuotesTemplate.highlighter(quote.ask, instrument, "ask")}"> ${quote.ask} </td>
@@ -2123,18 +2123,29 @@ class SlChartTemplate {
     static update(render) {
         /* eslint indent: off */
         return render`${hyperHTML.wire(render, "svg")`
-            <svg class="sl"></svg>`
+            <svg class="sl mw3"></svg>`
         }`;
     }
 
     static redraw(state) {
-
         const instrument = state.instrument,
             quote = state.quotes[instrument],
-            svg = d3.select(`[instrument="${instrument}"] > svg`),
+            svg = d3.select(`[data-instrument="${instrument}"] > svg`),
             node = svg.node(),
-            w = node.clientWidth,
-            h = getComputedStyle(node)["font-size"].replace("px", "");
+            w = node && node.clientWidth,
+            h = node && getComputedStyle(node)["font-size"].replace("px", "");
+
+        if (!node) {
+            return;
+        }
+
+        const bid = parseFloat(quote.bid);
+        const ask = parseFloat(quote.ask);
+
+        if (isNaN(bid) || isNaN(ask)) {
+            return;
+        }
+        const middle = (bid + ask) / 2;
 
         svg.selectAll("*").remove();
 
@@ -2142,9 +2153,7 @@ class SlChartTemplate {
             SlChartTemplate.data[instrument] = [];
         }
 
-        SlChartTemplate.data[instrument].push(
-            (parseFloat(quote.bid) +
-                parseFloat(quote.ask)) / 2);
+        SlChartTemplate.data[instrument].push(middle);
 
         SlChartTemplate.data[instrument] =
             SlChartTemplate.data[instrument].slice(-state.length);
