@@ -2117,7 +2117,6 @@ class QuotesComponent {
 
 QuotesComponent.bootstrap();
 
-// Inspired by http://bl.ocks.org/vicapow/9904319
 class SlChartTemplate {
 
     static update(render) {
@@ -2127,6 +2126,7 @@ class SlChartTemplate {
         }`;
     }
 
+    // Inspired by http://bl.ocks.org/vicapow/9904319
     static redraw(state) {
         const instrument = state.instrument,
             quote = state.quotes[instrument],
@@ -2138,6 +2138,7 @@ class SlChartTemplate {
         if (!node) {
             return;
         }
+        node.style.height = `${h}px`;
 
         const bid = parseFloat(quote.bid);
         const ask = parseFloat(quote.ask);
@@ -2154,28 +2155,29 @@ class SlChartTemplate {
         }
 
         SlChartTemplate.data[instrument].push(middle);
-
         SlChartTemplate.data[instrument] =
             SlChartTemplate.data[instrument].slice(-state.length);
 
-        if (SlChartTemplate.data[instrument][0] >
-                SlChartTemplate.data[instrument].slice(-1)) {
+        const data = SlChartTemplate.data[instrument];
+        const firstPoint = data[0];
+        const lastPoint = data.slice(-1);
+
+        if (firstPoint > lastPoint) {
             node.style.stroke = "red";
         } else {
             node.style.stroke = "green";
         }
-        node.style.height = `${h}px`;
 
-        const min$$1 = d3.min(SlChartTemplate.data[instrument]);
-        const max$$1 = d3.max(SlChartTemplate.data[instrument]);
+        const min$$1 = d3.min(data);
+        const max$$1 = d3.max(data);
 
         const x = d3.scaleLinear()
-            .domain([0, SlChartTemplate.data[instrument].length - 1])
+            .domain([0, data.length - 1])
             .range([0, w]);
         const y = d3.scaleLinear()
             .domain([+min$$1, +max$$1]).range([h, 0]);
 
-        const paths = SlChartTemplate.data[instrument]
+        const paths = data
             .map((d, i) => [x(i), y(d)])
             .join("L");
 
