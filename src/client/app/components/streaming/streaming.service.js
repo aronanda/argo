@@ -20,7 +20,7 @@ export class StreamingService {
         }).then(() => {
             StreamingService.getStream();
         }).catch(err => {
-            ToastsService.addToast(err);
+            ToastsService.addToast(`streaming ${err.message}`);
         });
     }
 
