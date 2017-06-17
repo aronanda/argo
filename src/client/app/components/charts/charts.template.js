@@ -35,12 +35,12 @@ export class ChartsTemplate {
                 `)}</select>
 
                 <a class="f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4">
-                    <span id="openBuyOrderDialog" class="pointer pl1"
-                        onclick="${e => events(e, "buy")}">Buy</span>
+                    <span id="openOrderDialogBuy" class="pointer pl1"
+                        onclick="${events}">Buy</span>
                 </a>
                 <a class="f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4">
-                    <span id="openSellOrderDialog" class="pointer pl1"
-                        onclick="${e => events(e, "sell")}">Sell</span>
+                    <span id="openOrderDialogSell" class="pointer pl1"
+                        onclick="${events}">Sell</span>
                 </a>
             </div>
 
@@ -52,9 +52,7 @@ export class ChartsTemplate {
                 trades="$ctrl.trades">
             </ohlc-chart>
 
-            <order-dialog ng-if="$ctrl.openOrderModal" open-modal="$ctrl.openOrderModal"
-                params="$ctrl.orderParams">
-            </order-dialog>
+            <order-dialog></order-dialog>
         `;
     }
 }

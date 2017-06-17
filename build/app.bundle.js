@@ -589,12 +589,12 @@ class ChartsTemplate {
                 `)}</select>
 
                 <a class="f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4">
-                    <span id="openBuyOrderDialog" class="pointer pl1"
-                        onclick="${e => events(e, "buy")}">Buy</span>
+                    <span id="openOrderDialogBuy" class="pointer pl1"
+                        onclick="${events}">Buy</span>
                 </a>
                 <a class="f5 no-underline black bg-animate hover-bg-black hover-white inline-flex items-center pa3 ba border-box mr4">
-                    <span id="openSellOrderDialog" class="pointer pl1"
-                        onclick="${e => events(e, "sell")}">Sell</span>
+                    <span id="openOrderDialogSell" class="pointer pl1"
+                        onclick="${events}">Sell</span>
                 </a>
             </div>
 
@@ -606,9 +606,7 @@ class ChartsTemplate {
                 trades="$ctrl.trades">
             </ohlc-chart>
 
-            <order-dialog ng-if="$ctrl.openOrderModal" open-modal="$ctrl.openOrderModal"
-                params="$ctrl.orderParams">
-            </order-dialog>
+            <order-dialog></order-dialog>
         `;
     }
 }
@@ -687,6 +685,326 @@ class ChartsService {
 
 ChartsService.candles = null;
 
+class OrderDialogTemplate {
+    static update(render, state, events) {
+        if (!state.orderModalIsOpen) {
+            Util.renderEmpty(render);
+            return;
+        }
+
+        OrderDialogTemplate.renderOrderModal(render, state, events);
+    }
+
+    static renderOrderModal(render, state, events) {
+        /* eslint indent: off */
+        render`
+            <div class="fixed absolute--fill bg-black-70 z5">
+            <div class="fixed absolute-center z999">
+
+            <main class="pa4 black-80 bg-white">
+                <form class="measure center">
+                    <fieldset id="order" class="ba b--transparent ph0 mh0">
+                        <legend class="f4 fw6 ph0 mh0 center">Order Dialog</legend>
+
+                        <div class="flex flex-row justify-between vh-50">
+
+                            <div class="flex flex-column items-start justify-between ma2">
+
+                                <div>
+                                    <input type="radio" name="marketOrder" value="MARKET"
+                                        checked="${state.orderInfo.type === "MARKET"}"
+                                        onchange="${e => {
+                                            state.orderInfo.type = e.target.value.trim();
+                                        }}">
+                                    <label for="marketOrder" class="lh-copy">Market</label>
+                                    <input type="radio" name="marketOrder" value="LIMIT"
+                                        checked="${state.orderInfo.type === "LIMIT"}"
+                                        onchange="${e => {
+                                            state.orderInfo.type = e.target.value.trim();
+                                        }}">
+                                    <label for="limitOrder" class="lh-copy">Limit</label>
+                                </div>
+
+                                <div>
+                                    <input type="radio" name="buy" value="buy"
+                                        checked="${state.orderInfo.side === "buy"}"
+                                        onchange="${e => {
+                                            state.orderInfo.side = e.target.value.trim();
+                                        }}">
+                                    <label for="buy" class="lh-copy">Buy</label>
+                                    <input type="radio" name="sell" value="sell"
+                                        checked="${state.orderInfo.side === "sell"}"
+                                        onchange="${e => {
+                                            state.orderInfo.side = e.target.value.trim();
+                                        }}">
+                                    <label for="sell" class="lh-copy">Sell</label>
+                                </div>
+
+                                <div>
+                                    <select id="market" onchange="${e => events(e,
+                                            e.target.value.trim()
+                                        )}">${
+
+                                        state.orderInfo.instruments.map(instrument => hyperHTML.wire()`
+                                        <option value="${instrument}" selected="${state.orderInfo.selectedInstrument === instrument}">
+                                            ${instrument}
+                                        </option>
+                                    `)}</select>
+                                </div>
+
+                                <input class="mw4" placeholder="Units" name="units" type="number"
+                                    oninput="${e => {
+                                        state.orderInfo.units = e.target.value.trim();
+                                    }}">
+
+                                <div class="w4">
+                                    <label for="quote" class="lh-copy">Quote</label>
+                                    <input class="mw4" placeholder="Quote"
+                                        name="quote" type="number"
+                                        oninput="${e => {
+                                            state.orderInfo.quote = e.target.value.trim();
+                                        }}"
+                                        disabled="${state.orderInfo.type === "MARKET"}"
+                                        step="${state.step}">
+                                </div>
+
+                                <div style="${Util.show(state.orderInfo.type === "LIMIT")}">
+                                    <select id="expire" onchange="${e => events(e,
+                                            e.target.value.trim()
+                                        )}">${
+
+                                        state.orderInfo.expires.map(expiry => hyperHTML.wire()`
+                                        <option value="${expiry.value}" selected="${state.orderInfo.selectedExpire === expiry.value}">
+                                            ${expiry.label}
+                                        </option>
+                                    `)}</select>
+                                </div>
+
+                            </div>
+
+                            <div class="flex flex-column items-end justify-between ma2">
+
+                                <div>
+                                    <input type="radio" name="price" value="price"
+                                        checked="${state.orderInfo.measure === "price"}"
+                                        onchange="${e => {
+                                            state.orderInfo.measure = e.target.value.trim();
+                                        }}">
+                                    <label for="price" class="lh-copy">Price</label>
+                                    <input type="radio" name="pips" value="pips"
+                                        checked="${state.orderInfo.measure === "pips"}"
+                                        onchange="${e => {
+                                            state.orderInfo.measure = e.target.value.trim();
+                                        }}">
+                                    <label for="pips" class="lh-copy">PIPS</label>
+                                </div>
+
+                                <div class="w4">
+                                    <input type="checkbox" checked="${state.orderInfo.isLowerBound}"
+                                        onchange="${e => {
+                                            state.orderInfo.isLowerBound = e.target.checked;
+                                        }}">
+                                    <label for="lowerBound" class="lh-copy">Lower Bound</label>
+                                    <input class="mw4" placeholder="Lower Bound"
+                                        name="lowerBound" type="number" min="0"
+                                        oninput="${e => {
+                                            state.orderInfo.lowerBound = e.target.value.trim();
+                                        }}"
+                                        disabled="${!state.orderInfo.isLowerBound}"
+                                        step="${state.orderInfo.step}">
+                                </div>
+
+                                <div class="w4">
+                                    <input type="checkbox" checked="${state.orderInfo.isUpperBound}"
+                                        onchange="${e => {
+                                            state.orderInfo.isUpperBound = e.target.checked;
+                                        }}">
+                                    <label for="upperBound" class="lh-copy">Upper Bound</label>
+                                    <input class="mw4" placeholder="Upper Bound"
+                                        name="upperBound" type="number" min="0"
+                                        oninput="${e => {
+                                            state.orderInfo.upperBound = e.target.value.trim();
+                                        }}"
+                                        disabled="${!state.orderInfo.isUpperBound}"
+                                        step="${state.orderInfo.step}">
+                                </div>
+
+                                <div class="w4">
+                                    <input type="checkbox" checked="${state.orderInfo.isTakeProfit}"
+                                        onchange="${e => {
+                                            state.orderInfo.isTakeProfit = e.target.checked;
+                                        }}">
+                                    <label for="takeProfit" class="lh-copy">Take Profit</label>
+                                    <input class="mw4" placeholder="Take Profit"
+                                        name="takeProfit" type="number" min="0"
+                                        oninput="${e => {
+                                            state.orderInfo.takeProfit = e.target.value.trim();
+                                        }}"
+                                        disabled="${!state.orderInfo.isTakeProfit}"
+                                        step="${state.orderInfo.step}">
+                                </div>
+
+                                <div class="w4">
+                                    <input type="checkbox" checked="${state.orderInfo.isStopLoss}"
+                                        onchange="${e => {
+                                            state.orderInfo.isStopLoss = e.target.checked;
+                                        }}">
+                                    <label for="stopLoss" class="lh-copy">Stop Loss</label>
+                                    <input class="mw4" placeholder="Stop Loss"
+                                        name="stopLoss" type="number" min="0"
+                                        oninput="${e => {
+                                            state.orderInfo.stopLoss = e.target.value.trim();
+                                        }}"
+                                        disabled="${!state.orderInfo.isStopLoss}"
+                                        step="${state.orderInfo.step}">
+                                </div>
+
+                                <div class="w4">
+                                    <input type="checkbox" checked="${state.orderInfo.isTrailingStop}"
+                                        onchange="${e => {
+                                            state.orderInfo.isTrailingStop = e.target.checked;
+                                        }}">
+                                    <label for="trailingStop" class="lh-copy">Trailing Stop</label>
+                                    <input class="mw4" placeholder="Trailing Stop"
+                                        name="trailingStop" type="number" min="0"
+                                        oninput="${e => {
+                                            state.orderInfo.trailingStop = e.target.value.trim();
+                                        }}"
+                                        disabled="${!state.orderInfo.isTrailingStop}"
+                                        step="${state.orderInfo.step}">
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </fieldset>
+
+                    <div class="flex flex-row items-center justify-around">
+                        <input id="orderSubmit" class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                            type="button" value="Submit" onclick="${events}">
+
+                        <input class="b ph3 pv2 input-reset ba b--black bg-transparent grow pointer f6 dib"
+                            type="button" value="Close"
+                            onclick="${() => {
+                                state.orderModalIsOpen = false;
+                            }}">
+                    </div>
+
+                </form>
+            </main>
+
+            </div>
+            </div>
+        `;
+    }
+
+}
+
+class OrdersService {
+    constructor(orders) {
+        if (!OrdersService.orders) {
+            OrdersService.orders = orders;
+        }
+    }
+
+
+    static getOrders() {
+        return OrdersService.orders;
+    }
+
+    static refresh() {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return;
+        }
+
+        Util.fetch("/api/orders", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId
+            })
+        }).then(res => res.json()).then(data => {
+            OrdersService.orders = data;
+        });
+    }
+
+    static putOrder(order) {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return null;
+        }
+
+        return Util.fetch("/api/order", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId,
+                instrument: order.instrument,
+                units: order.units,
+                side: order.side,
+                type: order.type,
+                expiry: order.expiry,
+                price: order.price,
+                priceBound: order.lowerBound || order.upperBound,
+                stopLossOnFill: order.stopLossOnFill,
+                takeProfitOnFill: order.takeProfitOnFill,
+                trailingStopLossOnFill: order.trailingStopLossOnFill
+            })
+        }).then(res => res.json()).then(data => data)
+            .catch(err => err.data);
+    }
+
+    static closeOrder(id) {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return null;
+        }
+
+        return Util.fetch("/api/closeorder", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId,
+                id
+            })
+        }).then(res => res.json()).then(data => data)
+            .catch(err => err.data);
+    }
+
+    static updateOrders(tick) {
+        const account = AccountsService.getAccount(),
+            pips = account.pips;
+
+        OrdersService.orders.forEach((order, index) => {
+            let current;
+
+            if (order.instrument === tick.instrument) {
+
+                if (order.units > 0) {
+                    current = tick.ask;
+                }
+                if (order.units < 0) {
+                    current = tick.bid;
+                }
+
+                OrdersService.orders[index].current = current;
+                OrdersService.orders[index].distance = (Math.abs(current - order.price) /
+                    pips[order.instrument]);
+            }
+        });
+    }
+}
+
+OrdersService.orders = null;
+
 class QuotesService {
     constructor(quotes) {
         if (!QuotesService.quotes) {
@@ -729,6 +1047,199 @@ class QuotesService {
 }
 
 QuotesService.quotes = null;
+
+class OrderDialogController {
+    constructor(render, template, bindings) {
+        const events = (e, payload) => Util.handleEvent(this, e, payload);
+
+        this.state = Introspected.observe(bindings,
+            state => template.update(render, state, events));
+
+        const account = AccountsService.getAccount();
+
+        this.pips = account.pips;
+
+        this.onMarketChange(null, this.state.selectedInstrument);
+    }
+
+    onMarketChange(e, instrument) {
+        if (!this.pips) {
+            return;
+        }
+
+        this.state.selectedInstrument = instrument;
+
+        const price = QuotesService.getQuotes()[instrument],
+            fixed = ((this.pips[this.state.selectedInstrument].toString())
+                .match(/0/g) || []).length;
+
+        this.state.measure = "price";
+        this.state.step = parseFloat(this.pips[this.state.selectedInstrument]);
+        if (this.state.orderInfo.side === "buy") {
+            this.state.quote = parseFloat(price && price.ask);
+            this.takeProfit = parseFloat((this.state.quote + this.state.step * 10)
+                .toFixed(fixed));
+            this.stopLoss = parseFloat((this.state.quote - this.state.step * 10)
+                .toFixed(fixed));
+        } else {
+            this.state.quote = parseFloat(price && price.bid);
+            this.takeProfit = parseFloat((this.state.quote - this.state.step * 10)
+                .toFixed(fixed));
+            this.stopLoss = parseFloat((this.state.quote + this.state.step * 10)
+                .toFixed(fixed));
+        }
+        this.lowerBound = parseFloat((this.state.quote - this.state.step).toFixed(fixed));
+        this.upperBound = parseFloat((this.state.quote + this.state.step).toFixed(fixed));
+        this.trailingStop = 25;
+    }
+
+    changeMeasure(measure) {
+        if (measure === "price") {
+            this.onMarketChange(null, this.state.selectedInstrument);
+        } else {
+            this.lowerBound = 1;
+            this.upperBound = 1;
+            this.takeProfit = 10;
+            this.stopLoss = 10;
+            this.trailingStop = 25;
+            this.state.step = 1;
+        }
+    }
+
+    onOrderSubmit() {
+        this.state.orderModalIsOpen = false;
+
+        if (!this.pips) {
+            ToastsService.addToast(`Pips info for ${this.state.selectedInstrument} not yet available. Retry.`);
+
+            return;
+        }
+
+        const order = {},
+            isBuy = this.state.orderInfo.side === "buy",
+            isMeasurePips = this.state.measure === "pips";
+
+        this.state.step = parseFloat(this.pips[this.state.selectedInstrument]);
+
+        order.instrument = this.state.selectedInstrument;
+        order.units = this.state.units;
+        if (this.state.units && !isBuy) {
+            order.units = `-${order.units}`;
+        }
+
+        order.side = this.state.orderInfo.side;
+        order.type = this.state.type;
+
+        if (order.type === "LIMIT") {
+            order.price = this.state.quote && this.state.quote.toString();
+            order.gtdTime = new Date(Date.now() + this.state.selectedExpire);
+        }
+
+        if (isMeasurePips) {
+            if (this.state.isLowerBound) {
+                order.priceBound =
+                    parseFloat((this.state.quote - this.state.step * this.lowerBound)
+                        .toString()).toString();
+            }
+            if (this.state.isUpperBound) {
+                order.priceBound =
+                    parseFloat((this.state.quote + this.state.step * this.upperBound)
+                        .toString()).toString();
+            }
+            if (isBuy) {
+                if (this.state.isTakeProfit) {
+                    order.takeProfitOnFill = {};
+                    order.takeProfitOnFill.price =
+                        parseFloat((this.state.quote + this.state.step * this.takeProfit)
+                            .toString()).toString();
+                }
+                if (this.state.isStopLoss) {
+                    order.stopLossOnFill = {};
+                    order.order.takeProfitOnFill.price =
+                        parseFloat((this.state.quote - this.state.step * this.stopLoss)
+                            .toString()).toString();
+                }
+            } else {
+                if (this.state.isTakeProfit) {
+                    order.takeProfitOnFill = {};
+                    order.takeProfitOnFill.price =
+                        parseFloat((this.state.quote - this.state.step * this.takeProfit)
+                            .toString()).toString();
+                }
+                if (this.state.isStopLoss) {
+                    order.stopLossOnFill = {};
+                    order.order.takeProfitOnFill.price =
+                        parseFloat((this.state.quote + this.state.step * this.stopLoss)
+                            .toString()).toString();
+                }
+            }
+        } else {
+            if (this.state.isLowerBound) {
+                order.priceBound = this.lowerBound.toString();
+            }
+            if (this.state.isUpperBound) {
+                order.priceBound = this.upperBound.toString();
+            }
+            if (this.state.isTakeProfit) {
+                order.takeProfitOnFill = {};
+                order.takeProfitOnFill.price = this.takeProfit.toString();
+            }
+            if (this.state.isStopLoss) {
+                order.stopLossOnFill = {};
+                order.stopLossOnFill.price = this.stopLoss.toString();
+            }
+        }
+        if (this.state.isTrailingStop) {
+            order.trailingStopLossOnFill = {};
+            order.trailingStopLossOnFill.distance =
+                (this.state.step * this.trailingStop).toString();
+        }
+
+        OrdersService.putOrder(order).then(transaction => {
+            let opened,
+                canceled,
+                side,
+                message;
+
+            if (transaction.message) {
+                message = `ERROR ${transaction.message}`;
+
+                ToastsService.addToast(message);
+            } else if (transaction.errorMessage) {
+                message = `ERROR ${transaction.errorMessage}`;
+
+                ToastsService.addToast(message);
+            } else if (transaction.orderCancelTransaction) {
+                canceled = transaction.orderCancelTransaction;
+
+                message = `ERROR ${canceled.reason}`;
+
+                ToastsService.addToast(message);
+            } else {
+                opened = transaction.orderFillTransaction ||
+                    transaction.orderFillTransaction ||
+                    transaction.orderCreateTransaction;
+
+                side = opened.units > 0 ? "buy" : "sell";
+                message = `${side} ` +
+                    `${opened.instrument} ` +
+                    `#${opened.id} ` +
+                    `@${opened.price} ` +
+                    `for ${opened.units}`;
+
+                ToastsService.addToast(message);
+            }
+        });
+    }
+}
+
+class OrderDialogComponent {
+    static bootstrap(state) {
+        const render = hyperHTML.bind(Util.query("order-dialog"));
+
+        this.orderDialogController = new OrderDialogController(render, OrderDialogTemplate, state);
+    }
+}
 
 class TradesService {
     constructor(trades) {
@@ -838,22 +1349,52 @@ class ChartsController {
                 "D",
                 "W",
                 "M"
-            ]
+            ],
+            orderModalIsOpen: false
         }, state => template.update(render, state, events));
+
+        this.state.orderInfo = {
+            side: "buy",
+            selectedInstrument: this.state.selectedInstrument,
+            instruments: this.state.account.streamingInstruments,
+            type: "MARKET",
+            units: "",
+            quote: "",
+            step: 1,
+            expires: [
+                { label: "1 Hour", value: 60 * 60 * 1000 },
+                { label: "2 Hours", value: 2 * 60 * 60 * 1000 },
+                { label: "3 Hours", value: 3 * 60 * 60 * 1000 },
+                { label: "4 Hours", value: 4 * 60 * 60 * 1000 },
+                { label: "5 Hours", value: 5 * 60 * 60 * 1000 },
+                { label: "6 Hours", value: 6 * 60 * 60 * 1000 },
+                { label: "8 Hours", value: 8 * 60 * 60 * 1000 },
+                { label: "12 Hours", value: 12 * 60 * 60 * 1000 },
+                { label: "18 Hours", value: 18 * 60 * 60 * 1000 },
+                { label: "1 Day", value: 60 * 60 * 24 * 1000 },
+                { label: "2 Days", value: 2 * 60 * 60 * 24 * 1000 },
+                { label: "1 Week", value: 7 * 60 * 60 * 24 * 1000 },
+                { label: "1 Month", value: 30 * 60 * 60 * 24 * 1000 },
+                { label: "2 Months", value: 60 * 60 * 60 * 24 * 1000 },
+                { label: "3 Months", value: 90 * 60 * 60 * 24 * 1000 }
+            ],
+            selectedExpire: 604800000, // 1 week
+            measure: "price",
+            isLowerBound: false,
+            isUpperBound: false,
+            isTakeProfit: false,
+            isStopLoss: false,
+            isTrailingStop: false
+        };
 
         this.chartsService = new ChartsService(this.state.candles);
 
         this.feed = QuotesService.getQuotes();
-
         this.trades = TradesService.getTrades();
 
         ChartsController.changeChart(this.state.selectedInstrument, this.state.selectedGranularity);
 
-        this.orderParams = {
-            side: "buy",
-            selectedInstrument: this.state.selectedInstrument,
-            instruments: this.state.account.streamingInstruments
-        };
+        OrderDialogComponent.bootstrap(this.state);
     }
 
     static changeChart(instrument, granularity) {
@@ -864,13 +1405,21 @@ class ChartsController {
     }
 
     openOrderDialog(side) {
-        Object.assign(this.orderParams, {
+        Object.assign(this.state.orderInfo, {
             side,
             selectedInstrument: this.state.selectedInstrument,
             instruments: this.state.account.streamingInstruments
         });
 
-        this.openOrderModal = true;
+        this.state.orderModalIsOpen = true;
+    }
+
+    onOpenOrderDialogBuyClick() {
+        this.openOrderDialog("buy");
+    }
+
+    onOpenOrderDialogSellClick() {
+        this.openOrderDialog("sell");
     }
 }
 
@@ -1098,103 +1647,6 @@ class SettingsDialogTemplate {
 
 }
 
-class OrdersService {
-    constructor(orders) {
-        if (!OrdersService.orders) {
-            OrdersService.orders = orders;
-        }
-    }
-
-
-    static getOrders() {
-        return OrdersService.orders;
-    }
-
-    static refresh() {
-        const credentials = SessionService.isLogged();
-
-        if (!credentials) {
-            return;
-        }
-
-        Util.fetch("/api/orders", {
-            method: "post",
-            body: JSON.stringify({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId
-            })
-        }).then(res => res.json()).then(data => {
-            OrdersService.orders = data;
-        });
-    }
-
-    static putOrder(order) {
-        const credentials = SessionService.isLogged();
-
-        if (!credentials) {
-            return;
-        }
-
-        Util.fetch("/api/order", {
-            method: "post",
-            body: JSON.stringify({
-                environment: credentials.environment,
-                token: credentials.token,
-                accountId: credentials.accountId,
-                instrument: order.instrument,
-                units: order.units,
-                side: order.side,
-                type: order.type,
-                expiry: order.expiry,
-                price: order.price,
-                priceBound: order.lowerBound || order.upperBound,
-                stopLossOnFill: order.stopLossOnFill,
-                takeProfitOnFill: order.takeProfitOnFill,
-                trailingStopLossOnFill: order.trailingStopLossOnFill
-            })
-        }).then(res => res.json()).then(data => data)
-            .catch(err => err.data);
-    }
-
-    // closeOrder(id) {
-    //     return this.SessionService.isLogged().then(
-    //         credentials => this.$http.post("/api/closeorder", {
-    //             environment: credentials.environment,
-    //             token: credentials.token,
-    //             accountId: credentials.accountId,
-    //             id
-    //         }).then(order => order.data)
-    //             .catch(err => err.data)
-    //     );
-    // }
-
-    static updateOrders(tick) {
-        const account = AccountsService.getAccount(),
-            pips = account.pips;
-
-        OrdersService.orders.forEach((order, index) => {
-            let current;
-
-            if (order.instrument === tick.instrument) {
-
-                if (order.units > 0) {
-                    current = tick.ask;
-                }
-                if (order.units < 0) {
-                    current = tick.bid;
-                }
-
-                OrdersService.orders[index].current = current;
-                OrdersService.orders[index].distance = (Math.abs(current - order.price) /
-                    pips[order.instrument]);
-            }
-        });
-    }
-}
-
-OrdersService.orders = null;
-
 class PluginsService {
     constructor(pluginsState) {
         if (!PluginsService.plugins) {
@@ -1287,7 +1739,7 @@ class StreamingService {
         }).then(() => {
             StreamingService.getStream();
         }).catch(err => {
-            ToastsService.addToast(err);
+            ToastsService.addToast(`streaming ${err.message}`);
         });
     }
 
@@ -2379,7 +2831,6 @@ class TradesComponent {
 TradesComponent.bootstrap();
 
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
-// import { orderDialog } from "./order-dialog/order-dialog.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
 }(hyperHTML,Introspected,d3));

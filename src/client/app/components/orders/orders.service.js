@@ -37,10 +37,10 @@ export class OrdersService {
         const credentials = SessionService.isLogged();
 
         if (!credentials) {
-            return;
+            return null;
         }
 
-        Util.fetch("/api/order", {
+        return Util.fetch("/api/order", {
             method: "post",
             body: JSON.stringify({
                 environment: credentials.environment,
@@ -61,17 +61,24 @@ export class OrdersService {
             .catch(err => err.data);
     }
 
-    // closeOrder(id) {
-    //     return this.SessionService.isLogged().then(
-    //         credentials => this.$http.post("/api/closeorder", {
-    //             environment: credentials.environment,
-    //             token: credentials.token,
-    //             accountId: credentials.accountId,
-    //             id
-    //         }).then(order => order.data)
-    //             .catch(err => err.data)
-    //     );
-    // }
+    static closeOrder(id) {
+        const credentials = SessionService.isLogged();
+
+        if (!credentials) {
+            return null;
+        }
+
+        return Util.fetch("/api/closeorder", {
+            method: "post",
+            body: JSON.stringify({
+                environment: credentials.environment,
+                token: credentials.token,
+                accountId: credentials.accountId,
+                id
+            })
+        }).then(res => res.json()).then(data => data)
+            .catch(err => err.data);
+    }
 
     static updateOrders(tick) {
         const account = AccountsService.getAccount(),

@@ -1,5 +1,4 @@
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
-// import { orderDialog } from "./order-dialog/order-dialog.module";
 // import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
 import "./account/account.module";
@@ -8,6 +7,7 @@ import "./charts/charts.module";
 import "./exposure/exposure.module";
 import "./header/header.module";
 import "./news/news.module";
+import "./order-dialog/order-dialog.module";
 import "./orders/orders.module";
 import "./plugins/plugins.module";
 import "./positions/positions.module";
