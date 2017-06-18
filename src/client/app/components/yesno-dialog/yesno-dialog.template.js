@@ -1,5 +1,3 @@
-import hyperHTML from "hyperHTML";
-
 import { Util } from "../../util";
 
 export class YesNoDialogTemplate {
