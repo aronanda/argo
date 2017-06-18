@@ -1,5 +1,4 @@
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
-// import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
 import "./account/account.module";
 import "./activity/activity.module";
@@ -19,3 +18,4 @@ import "./streaming/streaming.module";
 import "./toasts/toasts.module";
 import "./token-dialog/token-dialog.module";
 import "./trades/trades.module";
+import "./yesno-dialog/yesno-dialog.module";

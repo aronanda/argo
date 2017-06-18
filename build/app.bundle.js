@@ -2831,6 +2831,5 @@ class TradesComponent {
 TradesComponent.bootstrap();
 
 // import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
-// import { yesnoDialog } from "./yesno-dialog/yesno-dialog.module";
 
 }(hyperHTML,Introspected,d3));
