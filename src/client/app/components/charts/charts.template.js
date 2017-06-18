@@ -45,11 +45,11 @@ export class ChartsTemplate {
             </div>
 
             <ohlc-chart class="dn-s"
-                instrument="$ctrl.selectedInstrument"
-                granularity="$ctrl.selectedGranularity"
-                data="$ctrl.data"
-                feed="$ctrl.feed",
-                trades="$ctrl.trades">
+                instrument="${state.selectedInstrument}"
+                granularity="${state.selectedGranularity}"
+                data-data="${state.ohlcInfo.data}"
+                feed="${state.ohlcInfo.feed}"
+                trades="${state.ohlcInfo.trades}">
             </ohlc-chart>
 
             <order-dialog></order-dialog>

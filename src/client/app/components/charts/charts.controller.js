@@ -79,8 +79,11 @@ export class ChartsController {
 
         this.chartsService = new ChartsService(this.state.candles);
 
-        this.feed = QuotesService.getQuotes();
-        this.trades = TradesService.getTrades();
+        this.state.ohlcInfo = {
+            data: this.state.candles,
+            feed: QuotesService.getQuotes(),
+            trades: TradesService.getTrades()
+        };
 
         ChartsController.changeChart(this.state.selectedInstrument, this.state.selectedGranularity);
 

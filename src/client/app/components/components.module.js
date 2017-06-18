@@ -1,11 +1,10 @@
-// import { ohlcChart } from "./ohlc-chart/ohlc-chart.module";
-
 import "./account/account.module";
 import "./activity/activity.module";
 import "./charts/charts.module";
 import "./exposure/exposure.module";
 import "./header/header.module";
 import "./news/news.module";
+import "./ohlc-chart/ohlc-chart.module";
 import "./order-dialog/order-dialog.module";
 import "./orders/orders.module";
 import "./plugins/plugins.module";
