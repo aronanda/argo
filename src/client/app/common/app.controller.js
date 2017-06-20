@@ -7,4 +7,3 @@ export class AppController {
         }, state => template.update(render, state));
     }
 }
-

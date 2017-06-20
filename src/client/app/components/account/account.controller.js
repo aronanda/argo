@@ -12,4 +12,3 @@ export class AccountController {
         this.accountsService = new AccountsService(this.state.account);
     }
 }
-
